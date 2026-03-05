@@ -1,0 +1,79 @@
+
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sqlserver
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      # Escapar $ con $$ para evitar interpolación de docker compose
+      SA_PASSWORD: "Correos$$Masivos$$2026@!"
+      MSSQL_PID: "Express"
+    networks:
+      - correos-net
+    ports:
+      - "1433:1433"
+    volumes:
+      # Usar el volumen del SQL Server existente (no recrear)
+      - sqlserver_mssql_data:/var/opt/mssql
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: correos-backend
+    restart: always
+    env_file: ./backend/.env
+    depends_on:
+      - sqlserver
+    networks:
+      - proxy_net
+      - correos-net
+    expose:
+      - "4001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      - "traefik.http.routers.correos-api.rule=Host(`correos.findcontrol.info`) && PathPrefix(`/api-backend`)"
+      - "traefik.http.routers.correos-api.entrypoints=websecure"
+      - "traefik.http.routers.correos-api.tls.certresolver=le"
+      - "traefik.http.services.correos-api.loadbalancer.server.port=4001"
+      # Prioridad alta para que las rutas de API se manejen antes que el frontend
+      - "traefik.http.routers.correos-api.priority=10"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      # No pasar VITE_API_BASE_URL para que use ruta relativa /api-backend
+    container_name: correos-frontend
+    restart: always
+    networks:
+      - proxy_net
+      - correos-net
+    depends_on:
+      - backend
+    expose:
+      - "80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      - "traefik.http.routers.correos.rule=Host(`correos.findcontrol.info`) && !PathPrefix(`/api-backend`)"
+      - "traefik.http.routers.correos.entrypoints=websecure"
+      - "traefik.http.routers.correos.tls.certresolver=le"
+      - "traefik.http.services.correos.loadbalancer.server.port=90"
+      # Prioridad baja para que el frontend solo maneje rutas que no sean /api-backend
+      - "traefik.http.routers.correos.priority=1"
+
+networks:
+  proxy_net:
+    external: true
+
+  correos-net:
+    driver: bridge
+
+volumes:
+  sqlserver_mssql_data:
+    external: true

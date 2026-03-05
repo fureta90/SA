@@ -1,0 +1,23 @@
+/* =============================================================================
+   FINDCONTROL - Sistema de Estilos
+   =============================================================================
+   
+   Este archivo importa todos los estilos en el orden correcto.
+   Importar solo este archivo en tu aplicación.
+   
+   ESTRUCTURA:
+   1. Variables    - Design tokens (colores, espaciados, etc.)
+   2. Base         - Reset y tipografía
+   3. Components   - Elementos reutilizables (botones, cards, inputs, etc.)
+   4. Layouts      - Estructuras de página (sidebar, header, etc.)
+   5. Utilities    - Clases utilitarias (flex, margin, padding, etc.)
+   6. Pages        - Estilos específicos de páginas (login, etc.)
+   
+   ============================================================================= */
+
+@import '../styles/_variables.css';
+@import '../styles/_base.css';
+@import '../styles/_components.css';
+@import '../styles/_layouts.css';
+@import '../styles/_utilities.css';
+@import '../styles/_pages.css';

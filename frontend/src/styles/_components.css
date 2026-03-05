@@ -1,0 +1,713 @@
+/* =============================================================================
+   COMPONENTS - Elementos reutilizables
+   =============================================================================
+   
+   CONTENIDO:
+   1. Botones
+   2. Cards
+   3. Formularios (inputs, form-group, search)
+   4. Checkboxes
+   5. Badges
+   6. Tablas
+   7. Modal
+   8. Empty State
+   
+   ============================================================================= */
+
+/* =============================================================================
+   1. BOTONES
+   ============================================================================= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: var(--transition-normal);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Primary */
+.btn-primary {
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn-primary:hover::before {
+  left: 100%;
+}
+
+/* Secondary */
+.btn-secondary {
+  background-color: var(--gray-100);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--gray-200);
+}
+
+/* Success */
+.btn-success {
+  background-color: var(--color-success);
+  color: var(--text-inverse);
+}
+
+.btn-success:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* Danger */
+.btn-danger {
+  background-color: var(--color-danger);
+  color: var(--text-inverse);
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+/* Ghost */
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--gray-100);
+}
+
+/* Sizes */
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+}
+
+.btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+}
+
+/* Icon Button */
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+}
+
+.btn-icon.btn-sm {
+  width: 32px;
+  height: 32px;
+}
+
+/* =============================================================================
+   2. CARDS
+   ============================================================================= */
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
+  min-width: 0; /* evita que el card se expanda más que su contenedor */
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Stat Card */
+.stat-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--gradient-primary);
+}
+
+/* =============================================================================
+   3. FORMULARIOS
+   ============================================================================= */
+
+/* Form Group - Estilo con icono y línea animada */
+.form-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.form-group__label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.form-group__icon {
+  position: absolute;
+  left: 0;
+  bottom: 0.75rem;
+  color: var(--text-muted);
+  transition: var(--transition-normal);
+  pointer-events: none;
+}
+
+.form-group:focus-within .form-group__icon {
+  color: var(--color-primary);
+}
+
+.form-group__input {
+  width: 100%;
+  padding: 0.75rem 0;
+  padding-left: 2rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  border: none;
+  border-bottom: 1.5px solid var(--border-color);
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--text-primary);
+  outline: none;
+  transition: var(--transition-normal);
+}
+
+.form-group__input::placeholder {
+  color: var(--text-muted);
+}
+
+.form-group__input:focus {
+  border-bottom-color: transparent;
+}
+
+.form-group__line {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--gradient-primary);
+  transition: var(--transition-slow);
+}
+
+.form-group:focus-within .form-group__line {
+  left: 0;
+  width: 100%;
+}
+
+.form-group--no-margin {
+  margin-bottom: 0;
+}
+
+/* Input Simple */
+.input {
+  width: 100%;
+  padding: 0.75rem 0;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  border: none;
+  border-bottom: 1.5px solid var(--border-color);
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.input:focus {
+  border-bottom-color: var(--color-primary);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Autofill Fix */
+.form-group__input:-webkit-autofill,
+.form-group__input:-webkit-autofill:hover,
+.form-group__input:-webkit-autofill:focus,
+.form-group__input:-webkit-autofill:active,
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus,
+.input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+  background-color: transparent !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Search Container */
+.search-container {
+  position: relative;
+}
+
+.search-container__icon {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-container__input {
+  width: 100%;
+  padding: 0.75rem 0 0.75rem 2rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  border: none;
+  border-bottom: 1.5px solid var(--border-color);
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.search-container__input:focus {
+  border-bottom-color: transparent;
+}
+
+.search-container__input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-container__line {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--gradient-primary);
+  transition: var(--transition-slow);
+}
+
+.search-container:focus-within .search-container__line {
+  left: 0;
+  width: 100%;
+}
+
+/* =============================================================================
+   4. CHECKBOXES
+   ============================================================================= */
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-card);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.checkbox-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-primary);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 0;
+}
+
+.checkbox-item:hover::before {
+  opacity: 0.08;
+}
+
+.checkbox-item:hover {
+  border-color: var(--color-primary);
+}
+
+.checkbox-item.checked {
+  border-color: var(--color-primary);
+}
+
+.checkbox-item.checked::before {
+  opacity: 0.12;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.checkbox-item__label {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.checkbox-item__status {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.form-group__checkbox-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.1rem;  /* antes era 0.625rem */
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  width: fit-content;
+}
+
+.form-group__checkbox-toggle input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+/* =============================================================================
+   5. BADGES
+   ============================================================================= */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+}
+
+.badge-primary {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-success {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-purple {
+  background-color: #f3e8ff;
+  color: #6b21a8;
+}
+
+.badge-secondary {
+  background-color: var(--gray-100);
+  color: var(--text-secondary);
+}
+
+/* Special badges */
+.badge-from-profile {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.badge-added {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-removed {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Dark mode badges */
+[data-theme='dark'] .badge-primary {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+[data-theme='dark'] .badge-success {
+  background-color: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+[data-theme='dark'] .badge-danger {
+  background-color: rgba(220, 38, 38, 0.2);
+  color: #fca5a5;
+}
+
+[data-theme='dark'] .badge-purple {
+  background-color: rgba(139, 92, 246, 0.2);
+  color: #c4b5fd;
+}
+
+[data-theme='dark'] .badge-warning {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
+/* =============================================================================
+   6. TABLAS
+   ============================================================================= */
+.table-container {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th {
+  background-color: var(--gray-50);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table td {
+  padding: 1rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table tr:hover td {
+  background-color: var(--gray-50);
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+/* =============================================================================
+   7. MODAL
+   ============================================================================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+  padding: 1rem;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-color);
+  animation: modalSlideUp 0.25s ease-out;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.modal__close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-fast);
+}
+
+.modal__close:hover {
+  background-color: var(--gray-100);
+  color: var(--text-primary);
+}
+
+.modal__body {
+  padding: 1.5rem;
+}
+
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Modal Sizes */
+.modal--sm { max-width: 360px; }
+.modal--md { max-width: 500px; }
+.modal--lg { max-width: 700px; }
+.modal--xl { max-width: 900px; }
+
+/* =============================================================================
+   8. EMPTY STATE
+   ============================================================================= */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--text-muted);
+}
+
+.empty-state__icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  color: var(--gray-300);
+}
+
+.empty-state__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state__description {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+@media (max-width: 768px) {
+  .card {
+    padding: 1rem;
+  }
+
+  .checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-overlay {
+    padding: 0.75rem;
+  }
+
+  .modal {
+    max-height: 95vh;
+  }
+
+  .modal__header,
+  .modal__body {
+    padding: 1rem;
+  }
+
+  .modal__title {
+    font-size: 1.125rem;
+  }
+}

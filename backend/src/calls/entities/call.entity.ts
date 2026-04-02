@@ -1,6 +1,6 @@
 import {
   Column, CreateDateColumn, Entity,
-  ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn,
+  ManyToOne, PrimaryGeneratedColumn, Unique, UpdateDateColumn,
 } from 'typeorm'
 import { Campaign } from '../../campaigns/entities/campaign.entity'
 
@@ -14,6 +14,7 @@ export enum CallStatus {
   ERROR      = 'ERROR',
 }
 
+@Unique(['campaignId', 'nombreGrabacion'])
 @Entity('calls')
 export class Call {
   @PrimaryGeneratedColumn('uuid')
@@ -39,6 +40,9 @@ export class Call {
   @Column({ type: 'datetime', nullable: true })
   fechaFinLlamada: Date | null
 
+  @Column({ type: 'nvarchar', length: 20, nullable: true })
+  tipoLlamada: 'entrante' | 'saliente' | null
+
   @Column({ type: 'nvarchar', length: 255, nullable: true })
   idLlamada: string | null
 
@@ -56,6 +60,10 @@ export class Call {
 
   @Column({ type: 'nvarchar', length: 255, nullable: true })
   callId: string | null
+
+  /** Job ID devuelto por la API de Speech Analytics al encolar el análisis */
+  @Column({ type: 'nvarchar', length: 255, nullable: true })
+  analysisJobId: string | null
 
   @Column({ type: 'nvarchar', length: 'MAX', nullable: true })
   analysisResult: string | null

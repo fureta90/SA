@@ -48,7 +48,7 @@ export class CampaignsController {
   // ── Helper: determinar si el usuario es admin ──────────────────────────────
 
   private async isUserAdmin(req: any): Promise<boolean> {
-    const userId = req.user?.userId ?? req.user?.sub
+    const userId    = req.user?.userId ?? req.user?.sub
     const emailLower = (req.user?.email || '').toString().toLowerCase()
 
     if (!userId) return false
@@ -116,14 +116,14 @@ export class CampaignsController {
     if (!file) throw new BadRequestException('No se recibió archivo')
 
     const outFilename = `resized-${file.filename.replace(/\.[^.]+$/, '')}.png`
-    const outPath = join(UPLOAD_DIR, outFilename)
+    const outPath     = join(UPLOAD_DIR, outFilename)
 
     await sharp(file.path)
       .trim({ threshold: 80 })
       .resize(500, 280, {
-        fit: 'contain',
-        position: 'centre',
-        background: { r: 0, g: 0, b: 0, alpha: 0 }
+        fit:        'contain',
+        position:   'centre',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
       })
       .png()
       .toFile(outPath)
@@ -157,7 +157,7 @@ export class CampaignsController {
   @ApiResponse({ status: 401, description: 'No autorizado' })
   @ApiResponse({ status: 403, description: 'No tienes permisos para ver campañas' })
   async findAll(@Req() req: any): Promise<Campaign[]> {
-    const userId = this.getUserId(req)
+    const userId  = this.getUserId(req)
     const isAdmin = await this.isUserAdmin(req)
     return this.campaignsService.findAllForUser(userId, isAdmin)
   }
@@ -170,10 +170,19 @@ export class CampaignsController {
   @ApiParam({ name: 'id', description: 'ID de la campaña' })
   @ApiResponse({ status: 200, description: 'Campaña encontrada' })
   @ApiResponse({ status: 404, description: 'Campaña no encontrada' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'No tienes permisos para ver campañas' })
   findOne(@Param('id') id: string): Promise<Campaign> {
     return this.campaignsService.findOneWithUsers(id)
+  }
+
+  @Get(':id/minutes-summary')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('view_campaigns', 'view_analytics', 'update_campaigns')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Resumen de consumo de minutos de una campaña' })
+  @ApiParam({ name: 'id', description: 'ID de la campaña' })
+  @ApiResponse({ status: 200, description: 'Resumen de minutos' })
+  getMinutesSummary(@Param('id') id: string) {
+    return this.campaignsService.getMinutesSummary(id)
   }
 
   @Patch(':id')
@@ -185,8 +194,6 @@ export class CampaignsController {
   @ApiBody({ type: UpdateCampaignDto })
   @ApiResponse({ status: 200, description: 'Campaña actualizada exitosamente' })
   @ApiResponse({ status: 404, description: 'Campaña no encontrada' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'No tienes permisos para modificar campañas' })
   update(
     @Param('id') id: string,
     @Body() updateCampaignDto: UpdateCampaignDto,
@@ -202,8 +209,6 @@ export class CampaignsController {
   @ApiParam({ name: 'id', description: 'ID de la campaña' })
   @ApiResponse({ status: 200, description: 'Campaña eliminada exitosamente' })
   @ApiResponse({ status: 404, description: 'Campaña no encontrada' })
-  @ApiResponse({ status: 401, description: 'No autorizado' })
-  @ApiResponse({ status: 403, description: 'No tienes permisos para eliminar campañas' })
   remove(@Param('id') id: string): Promise<void> {
     return this.campaignsService.remove(id)
   }

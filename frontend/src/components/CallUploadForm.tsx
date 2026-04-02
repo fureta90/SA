@@ -1,5 +1,5 @@
 import React, { FormEvent, useRef, useState } from 'react'
-import { Clock, FileAudio, Hash, Phone, Upload, User, X } from 'lucide-react'
+import { FileAudio, Hash, Phone, PhoneIncoming, PhoneOutgoing, Upload, User, X } from 'lucide-react'
 import Swal from 'sweetalert2'
 import { Modal } from './Modal'
 import { callsService } from '../services/calls.service'
@@ -21,11 +21,11 @@ export const CallUploadForm: React.FC<CallUploadFormProps> = ({
   const [audioFile, setAudioFile]       = useState<File | null>(null)
   const [nombreGrabacion, setNombre]    = useState('')
   const [usuarioLlamada, setUsuario]    = useState('')
+  const [tipoLlamada, setTipoLlamada]   = useState<'entrante' | 'saliente' | ''>('')
   const [fechaInicio, setFechaInicio]   = useState('')
   const [fechaFin, setFechaFin]         = useState('')
   const [idLlamada, setIdLlamada]       = useState('')
   const [idContacto, setIdContacto]     = useState('')
-  const [duracion, setDuracion]         = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [dragOver, setDragOver]         = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -44,8 +44,8 @@ export const CallUploadForm: React.FC<CallUploadFormProps> = ({
 
   const handleReset = () => {
     setAudioFile(null); setNombre(''); setUsuario('')
-    setFechaInicio(''); setFechaFin(''); setIdLlamada('')
-    setIdContacto(''); setDuracion('')
+    setTipoLlamada(''); setFechaInicio(''); setFechaFin('')
+    setIdLlamada(''); setIdContacto('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -54,17 +54,21 @@ export const CallUploadForm: React.FC<CallUploadFormProps> = ({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!audioFile || !nombreGrabacion.trim()) return
+    if (!tipoLlamada) {
+      Swal.fire({ icon: 'warning', title: 'Falta la dirección de la llamada', text: 'Seleccioná si es entrante o saliente', confirmButtonColor: '#7c3aed' })
+      return
+    }
     setIsSubmitting(true)
     try {
       const dto: CreateCallDto = {
         campaignId,
         nombreGrabacion:    nombreGrabacion.trim(),
+        tipoLlamada,
         usuarioLlamada:     usuarioLlamada  || undefined,
         fechaInicioLlamada: fechaInicio     || undefined,
         fechaFinLlamada:    fechaFin        || undefined,
         idLlamada:          idLlamada       || undefined,
         idContacto:         idContacto      || undefined,
-        duracionSegundos:   duracion ? parseInt(duracion) : undefined,
       }
       await callsService.create(dto, audioFile)
       handleReset()
@@ -101,9 +105,7 @@ export const CallUploadForm: React.FC<CallUploadFormProps> = ({
             onDrop={handleDrop}
           >
             <div className="call-upload-dropzone__icon"><Upload size={26}/></div>
-            <p className="call-upload-dropzone__title">
-              {t.speech.selectAudio}
-            </p>
+            <p className="call-upload-dropzone__title">{t.speech.selectAudio}</p>
             <p className="call-upload-dropzone__hint">{t.speech.audioFormats}</p>
           </div>
         ) : (
@@ -133,36 +135,62 @@ export const CallUploadForm: React.FC<CallUploadFormProps> = ({
           <div className="form-group__line"/>
         </div>
 
+        {/* Dirección de llamada */}
+        <div className="form-group" style={{ marginBottom: '0.25rem' }}>
+          <label className="form-group__label">Dirección de la llamada *</label>
+          <div style={{ display: 'flex', gap: '0.625rem', marginTop: '0.5rem' }}>
+            {(['entrante', 'saliente'] as const).map(tipo => (
+              <button
+                key={tipo}
+                type="button"
+                onClick={() => setTipoLlamada(tipo)}
+                style={{
+                  flex: 1,
+                  padding: '0.5rem 0.75rem',
+                  borderRadius: 'var(--border-radius-md, 8px)',
+                  border: `1.5px solid ${tipoLlamada === tipo ? 'var(--color-primary, #7c3aed)' : 'var(--color-border, rgba(0,0,0,0.15))'}`,
+                  background: tipoLlamada === tipo ? 'rgba(124,58,237,0.07)' : 'transparent',
+                  color: tipoLlamada === tipo ? 'var(--color-primary, #7c3aed)' : 'var(--text-muted, #888)',
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                  fontWeight: tipoLlamada === tipo ? 600 : 400,
+                  fontSize: '0.82rem',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {tipo === 'entrante'
+                  ? <><PhoneIncoming size={14}/> Entrante</>
+                  : <><PhoneOutgoing size={14}/> Saliente</>
+                }
+              </button>
+            ))}
+          </div>
+          {!tipoLlamada && (
+            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted, #888)', marginTop: '0.3rem' }}>
+              Requerido — afecta la evaluación de calidad
+            </p>
+          )}
+        </div>
+
         {/* Grid campos opcionales */}
         <div className="call-upload-form__grid">
-          {/* Fechas con DateTimeField — sin ícono nativo del browser */}
-            <DateTimeField
-              label="Inicio llamada"
-              value={fechaInicio}
-              onChange={setFechaInicio}
-            />
+          <DateTimeField
+            label="Inicio llamada"
+            value={fechaInicio}
+            onChange={setFechaInicio}
+          />
+          <DateTimeField
+            label="Fin llamada"
+            value={fechaFin}
+            onChange={setFechaFin}
+            minDate={fechaInicio ? fechaInicio.split('T')[0] : undefined}
+          />
 
-            <DateTimeField
-              label="Fin llamada"
-              value={fechaFin}
-              onChange={setFechaFin}
-              minDate={fechaInicio ? fechaInicio.split('T')[0] : undefined}
-            />
-
-            
           <div className="form-group">
             <label className="form-group__label">{t.labels.username}</label>
             <User size={18} className="form-group__icon"/>
             <input type="text" placeholder="Agente o usuario" value={usuarioLlamada}
               onChange={(e) => setUsuario(e.target.value)} className="form-group__input"/>
-            <div className="form-group__line"/>
-          </div>
-
-          <div className="form-group">
-            <label className="form-group__label">{t.speech.duration} (seg)</label>
-            <Clock size={18} className="form-group__icon"/>
-            <input type="number" placeholder="Ej: 180" value={duracion} min={0}
-              onChange={(e) => setDuracion(e.target.value)} className="form-group__input"/>
             <div className="form-group__line"/>
           </div>
 
@@ -181,15 +209,12 @@ export const CallUploadForm: React.FC<CallUploadFormProps> = ({
               onChange={(e) => setIdContacto(e.target.value)} className="form-group__input"/>
             <div className="form-group__line"/>
           </div>
-
-          
-
         </div>
 
         {/* Footer */}
         <div className="call-upload-form__footer">
           <button type="submit" className="btn btn-primary"
-            disabled={isSubmitting || !audioFile || !nombreGrabacion.trim()}>
+            disabled={isSubmitting || !audioFile || !nombreGrabacion.trim() || !tipoLlamada}>
             <Upload size={15}/>
             {isSubmitting ? t.actions.saving : t.speech.upload}
           </button>

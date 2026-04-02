@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { Repository } from 'typeorm'
-const { Storage } = require('@google-cloud/storage')
+import { Storage } from '@google-cloud/storage'
 import { Call } from '../calls/entities/call.entity'
 
 @Injectable()

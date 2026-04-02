@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { NestFactory } from '@nestjs/core';
-import { NestExpressApplication } from '@nestjs/platform-express'; // ← agregar
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -10,15 +10,16 @@ import { join } from 'path'
 
 async function bootstrap() {
   try {
-    // ← el tipo va acá
     const app = await NestFactory.create<NestExpressApplication>(AppModule)
 
-    // O más simple, configurar CORS para incluir los assets:
+    // dotenv/config ya cargó las variables — process.env disponible sin ConfigService
+    const urlApp = process.env.URL_APP;
+
     app.enableCors({
       origin: [
         'http://localhost:5174',
         'http://localhost:5173',
-        'https://correos.findcontrol.info',
+        ...(urlApp ? [urlApp] : []),
       ],
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       credentials: true,
@@ -65,9 +66,9 @@ async function bootstrap() {
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('api', app, document, {
+    SwaggerModule.setup('api-backend/docs', app, document, {
       swaggerOptions: {
-        persistAuthorization: true, // Mantiene el token en la sesión
+        persistAuthorization: true,
       },
     });
 

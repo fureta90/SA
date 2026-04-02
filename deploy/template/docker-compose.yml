@@ -1,0 +1,114 @@
+# Template de despliegue por cliente — SQL Server aislado por cliente
+# Variables leídas desde .env en este mismo directorio
+#
+# Uso: docker compose -p ${CLIENT_NAME} up -d
+# El flag -p prefija todos los recursos (contenedores, redes, volúmenes)
+# garantizando aislamiento total entre clientes.
+
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD}
+      MSSQL_PID: ${MSSQL_PID:-Developer}
+    networks:
+      - internal
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      # Verifica que el puerto 1433 esté escuchando (funciona en todas las versiones)
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/1433' 2>/dev/null && echo ok || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  backend:
+    image: ${APP_IMAGE:-findcontrol/speechanalytics:latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DB_HOST: sqlserver
+    volumes:
+      - ./gcs-key.json:/app/gcs-key.json:ro
+      - uploads:/app/uploads
+    networks:
+      - proxy_net
+      - internal
+    expose:
+      - "${PORT:-4001}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      # ── Router API ──
+      - "traefik.http.routers.${CLIENT_NAME}-api.rule=Host(`${DOMAIN}`) && PathPrefix(`/api-backend`)"
+      - "traefik.http.routers.${CLIENT_NAME}-api.entrypoints=websecure"
+      - "traefik.http.routers.${CLIENT_NAME}-api.tls.certresolver=le"
+      - "traefik.http.services.${CLIENT_NAME}-api.loadbalancer.server.port=${PORT:-4001}"
+      - "traefik.http.routers.${CLIENT_NAME}-api.priority=10"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:${PORT:-4001}/api-backend"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-findcontrol/speechanalytics-frontend:latest}
+    restart: unless-stopped
+    networks:
+      - proxy_net
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy_net"
+      # ── Router Frontend ──
+      - "traefik.http.routers.${CLIENT_NAME}.rule=Host(`${DOMAIN}`) && !PathPrefix(`/api-backend`)"
+      - "traefik.http.routers.${CLIENT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.${CLIENT_NAME}.tls.certresolver=le"
+      - "traefik.http.services.${CLIENT_NAME}.loadbalancer.server.port=80"
+      - "traefik.http.routers.${CLIENT_NAME}.priority=1"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - internal
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  proxy_net:
+    external: true   # Traefik ya corre en esta red — NO crear una nueva
+  internal:
+    driver: bridge   # Red privada: sqlserver + backend + redis (sin exposición externa)
+
+volumes:
+  sqlserver-data:    # Datos SQL Server persistentes por cliente
+  redis-data:
+  uploads:

@@ -1633,6 +1633,8 @@
 .call-card__icon-btn--analyze:hover { background: rgba(44, 146, 230, 0.1); color: var(--color-primary); }
 .call-card__icon-btn--retry         { color: #d97706; }
 .call-card__icon-btn--retry:hover   { background: rgba(217, 119, 6, 0.1); color: #d97706; }
+.call-card__icon-btn--reanalyze       { color: #7c3aed; }
+.call-card__icon-btn--reanalyze:hover { background: rgba(124, 58, 237, 0.1); color: #7c3aed; }
 .call-card__icon-btn--delete        { color: var(--color-danger); }
 .call-card__icon-btn--delete:hover  { background: rgba(220, 38, 38, 0.08); color: var(--color-danger); }
 
@@ -1673,13 +1675,30 @@
 /* ── Calls header ── */
 .calls-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.calls-header__left { display: flex; align-items: center; gap: 0.75rem; }
+/* ── Fila 1: título + botón nueva grabación ── */
+.calls-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* ── Fila 2: controles (refresh, filtro, orden, toggle) ── */
+.calls-header__right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.calls-header__left { display: flex; align-items: center; gap: 0.75rem; flex: 1 1 auto; min-width: 0; }
+.calls-header__new-btn { flex-shrink: 0; white-space: nowrap; }
 
 .calls-header__back {
   display: flex;
@@ -1700,7 +1719,6 @@
 
 .calls-header__title { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0; }
 .calls-header__sub   { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
-.calls-header__right { display: flex; align-items: center; gap: 0.5rem; }
 
 .calls-header__icon-btn {
   display: flex;
@@ -1718,7 +1736,6 @@
 
 .calls-header__icon-btn:hover:not(:disabled)  { border-color: var(--color-primary); color: var(--color-primary); }
 .calls-header__icon-btn:disabled              { opacity: 0.5; cursor: not-allowed; }
-.calls-header__right .btn                     { white-space: nowrap; }
 
 .calls-header__icon-btn--active {
   border-color: var(--color-primary) !important;
@@ -2450,7 +2467,6 @@
   padding: 0.875rem 1.5rem 0.875rem 1.25rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.12);
 
-  /* Ancho fijo — todos los hijos saben cuánto espacio hay */
   width: 720px;
   max-width: calc(100vw - 3rem);
   box-sizing: border-box;
@@ -2463,7 +2479,6 @@
   to   { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1);    }
 }
 
-/* ── Waveform decorativa ── */
 .audio-player__wave { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 
 .audio-player__bar {
@@ -2484,12 +2499,11 @@
   to   { transform: scaleY(1);   opacity: 1;   }
 }
 
-/* ── Info ── */
 .audio-player__info {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  flex: 0 0 160px;  /* ancho fijo compacto */
+  flex: 0 0 160px;
   width: 160px;
 }
 
@@ -2512,7 +2526,6 @@
   margin-top: 0.1rem;
 }
 
-/* ── Controles ── */
 .audio-player__controls { display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0; }
 
 .audio-player__btn {
@@ -2542,10 +2555,9 @@
 
 .audio-player__btn--sm { width: 26px; height: 26px; }
 
-/* ── Progress ── */
 .audio-player__progress-wrap {
-  flex: 1 1 0;    /* crece todo lo posible, puede comprimir hasta 0 */
-  min-width: 0;   /* clave: permite que flex encoja sin desbordarse */
+  flex: 1 1 0;
+  min-width: 0;
   padding: 0.375rem 0;
 }
 
@@ -2584,7 +2596,6 @@
 
 .audio-player__progress:hover .audio-player__progress-thumb { opacity: 1; }
 
-/* ── Volumen ── */
 .audio-player__volume { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
 
 .audio-player__volume-slider {
@@ -2607,7 +2618,6 @@
   cursor: pointer;
 }
 
-/* ── Velocidad ── */
 .audio-player__speed {
   margin-left: 0.5rem;
   padding: 0.15rem 0.45rem;
@@ -2627,7 +2637,6 @@
 .audio-player__speed:hover { background: var(--bg-app); color: var(--text-primary); border-color: var(--color-primary); }
 .audio-player__speed--active { background: rgba(44, 146, 230, 0.1); color: var(--color-primary); border-color: var(--color-primary); }
 
-/* ── Cerrar ── */
 .audio-player__close {
   width: 26px;
   height: 26px;
@@ -2645,8 +2654,6 @@
 
 .audio-player__close:hover { background: rgba(220, 38, 38, 0.1); color: var(--color-danger); }
 
-/* ── Responsive ── */
-/* Ocultar wave en desktop cuando no hay espacio suficiente */
 @media (max-width: 860px) {
   .audio-player__wave { display: none; }
 }
@@ -2681,18 +2688,252 @@
   margin: 1.5rem 0 0.75rem;
 }
 
-.dashboard-grid--5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
+/* Grid 5 y 6 columnas — minmax para adaptarse al sidebar y resolución */
+.dashboard-grid--5 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+.dashboard-grid--6 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
 
-@media (max-width: 1100px) { .dashboard-grid--5 { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 640px)  { .dashboard-grid--5 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1200px) {
+  .dashboard-grid--5 { grid-template-columns: repeat(5, 1fr); }
+  .dashboard-grid--6 { grid-template-columns: repeat(6, 1fr); }
+}
 
-.stat-card--cyan   { border-top: 3px solid #0891b2; }
-.stat-card--blue   { border-top: 3px solid var(--color-primary); }
-.stat-card--green  { border-top: 3px solid #059669; }
-.stat-card--orange { border-top: 3px solid #d97706; }
-.stat-card--red    { border-top: 3px solid #dc2626; }
-.stat-card--gray   { border-top: 3px solid var(--border-color); }
+@media (max-width: 640px) {
+  .dashboard-grid--5,
+  .dashboard-grid--6 { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+}
 
+@media (max-width: 380px) {
+  .dashboard-grid--5,
+  .dashboard-grid--6 { grid-template-columns: 1fr; }
+}
+
+/* =============================================================================
+   UNIFIED STAT CARD SYSTEM
+   
+   Used by both Dashboard and ReportsView.
+   All cards share the same base layout with a colored left stripe.
+   Each variant sets --card-color to control the stripe + icon bg.
+   ============================================================================= */
+
+/* ── Base stat card ── */
+.stat-card {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s, box-shadow 0.15s;
+  min-width: 0;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Colored left stripe ── */
+.stat-card::before {
+  content: '';
+  display: block;
+  width: 4px;
+  flex-shrink: 0;
+  background: var(--card-color, var(--color-primary));
+  transition: width 0.15s;
+}
+
+.stat-card:hover::before {
+  width: 5px;
+}
+
+/* ── Content wrapper ── */
+.stat-card .dashboard-admin__stat-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 0.75rem;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.stat-card .dashboard-admin__stat-label {
+  margin: 0 0 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  /* Permite wrap en tarjetas angostas en vez de cortarse */
+  white-space: normal;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.stat-card .dashboard-admin__stat-value {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+/* Icono — siempre cuadrado, centrado, tamaño fijo */
+.stat-card .dashboard-admin__stat-icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  /* Fallback para navegadores sin color-mix */
+  background: var(--icon-bg, rgba(44, 146, 230, 0.12));
+  background: color-mix(in srgb, var(--card-color, var(--color-primary)) 12%, transparent);
+}
+
+/* Forzar tamaño del SVG dentro del icono */
+.stat-card .dashboard-admin__stat-icon > svg {
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .stat-card .dashboard-admin__stat-icon {
+  filter: brightness(0.85);
+}
+
+/* ── Color variants — set --card-color ── */
+
+/* Campaigns → cyan / uploaded */
+.stat-card--cyan   { --card-color: #0891b2; }
+
+/* Total recordings → primary blue */
+.stat-card--blue   { --card-color: #2c92e6; }
+
+/* Analyzed → same green as .call-status--analyzed */
+.stat-card--green  { --card-color: #059669; }
+
+/* Audited → same pink as .call-status--audited */
+.stat-card--pink   { --card-color: #db2777; }
+
+/* In Progress (pending/uploading/analyzing) → orange (uploading color) */
+.stat-card--orange { --card-color: #d97706; }
+
+/* Errors → same red as .call-status--error */
+.stat-card--red    { --card-color: #dc2626; }
+
+/* Muted (no errors) */
+.stat-card--muted  { --card-color: var(--border-color); }
+
+/* ── Clickable variant ── */
+.stat-card--clickable {
+  cursor: pointer;
+}
+
+.stat-card--clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+
+.stat-card--clickable:active {
+  transform: translateY(-1px);
+}
+
+/* ── db-stat-card (legacy alias — keep for backward compat) ── */
+.db-stat-card {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s, box-shadow 0.15s;
+  min-width: 0;
+}
+
+.db-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.db-stat-card__stripe {
+  width: 4px;
+  flex-shrink: 0;
+  background: var(--card-color, var(--color-primary));
+}
+
+.db-stat-card:hover .db-stat-card__stripe { width: 5px; }
+
+.db-stat-card__body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0.875rem;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.db-stat-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.db-stat-card__label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-stat-card__value {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.db-stat-card__icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .db-stat-card__icon-wrap {
+  filter: brightness(0.85);
+}
+
+/* ── Dashboard score / bar ── */
 .dashboard-bottom { display: grid; grid-template-columns: 280px 1fr; gap: 1rem; margin-top: 1rem; }
 @media (max-width: 768px) { .dashboard-bottom { grid-template-columns: 1fr; } }
 
@@ -2730,10 +2971,6 @@
 .dashboard-recent__item-name                    { margin: 0; font-size: 0.825rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dashboard-recent__item-meta                    { margin: 0; font-size: 0.72rem; color: var(--text-muted); }
 .dashboard-recent__item-score                   { font-size: 0.875rem; font-weight: 800; color: #059669; background: rgba(5, 150, 105, 0.1); border-radius: var(--radius-sm); padding: 0.15rem 0.5rem; flex-shrink: 0; }
-
-.stat-card--clickable { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
-.stat-card--clickable:hover  { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(8, 145, 178, 0.2); }
-.stat-card--clickable:active { transform: translateY(-1px); }
 
 .dashboard-bottom-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 1rem; }
 @media (max-width: 900px) { .dashboard-bottom-2col { grid-template-columns: 1fr; } }
@@ -2799,7 +3036,7 @@
 .dcs--analyzed { background: rgba(5,150,105,0.12);   color: #059669; }
 .dcs--error    { background: rgba(220,38,38,0.12);   color: #dc2626; }
 .dcs--ok       { background: rgba(100,116,139,0.08); color: var(--text-muted); }
-.dcs--score    { background: rgba(44,146,230,0.12); color: var(--color-primary); font-size: 0.8rem; font-weight: 800; min-width: 2.5rem; justify-content: center; }
+.dcs--score    { font-size: 0.8rem; font-weight: 800; min-width: 2.5rem; justify-content: center; }
 
 /* ── Dashboard timeline ── */
 .dash-timeline { display: flex; flex-direction: column; padding-top: 0.25rem; }
@@ -2826,7 +3063,7 @@
 .dash-timeline__name     { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); margin: 0 0 0.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dash-timeline__footer   { display: flex; align-items: center; gap: 0.5rem; }
 .dash-timeline__campaign { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dash-timeline__score    { font-size: 0.72rem; font-weight: 700; color: #059669; background: rgba(5, 150, 105, 0.1); padding: 0.1rem 0.4rem; border-radius: var(--radius-sm); flex-shrink: 0; }
+.dash-timeline__score    { font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: var(--radius-sm); flex-shrink: 0; }
 
 /* =============================================================================
    8. SPEECH ANALYTICS
@@ -2890,9 +3127,6 @@
 
 .sa-persons__name { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FIX 1 — sa-stats: título arriba, valor centrado h+v
-   ───────────────────────────────────────────────────────────────────────────── */
 .sa-stats {
   display: flex;
   align-items: stretch;
@@ -2904,22 +3138,14 @@
   flex-shrink: 0;
 }
 
-/* FIX 1: cada item es columna; el lbl queda arriba y el val ocupa el resto */
 .sa-stats__item    { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-
-/* FIX 1: divider se estira toda la altura del item */
 .sa-stats__divider { width: 1px; align-self: stretch; background: var(--border-color); flex-shrink: 0; }
-
-/* FIX 1: título pegado arriba */
 .sa-stats__lbl     { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); align-self: flex-start; flex-shrink: 0; }
-
-/* FIX 1 + FIX 3: valor centrado h+v; texto centrado */
 .sa-stats__val     { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 0.95rem; font-weight: 700; color: var(--text-primary); line-height: 1.1; }
 
 .sa-stats__val--score       { color: var(--color-primary); font-size: 1.1rem; }
 .sa-stats__val--score small { font-size: 0.7rem; color: var(--text-muted); font-weight: 400; }
 
-/* FIX 3: "Sin resolución" — fuente pequeña para que entre sin overflow */
 .sa-stats__val.sa-stats__val--small {
   font-size: 0.68rem;
   line-height: 1.2;
@@ -2930,9 +3156,6 @@
 .sa-stats__bar      { height: 3px; background: var(--border-color); border-radius: 99px; overflow: hidden; flex-shrink: 0; }
 .sa-stats__bar-fill { height: 100%; background: var(--gradient-primary, var(--color-primary)); border-radius: 99px; transition: width 0.5s ease; }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FIX 2 — sa-meta-accordion: acordeón que envuelve sa-meta-list
-   ───────────────────────────────────────────────────────────────────────────── */
 .sa-meta-accordion {
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
@@ -2983,10 +3206,8 @@
 
 .sa-meta-accordion--closed .sa-meta-accordion__body { display: none; }
 
-/* cuando está dentro del acordeón, quitamos el border-top duplicado */
 .sa-meta-accordion .sa-meta-list { border-top: none; padding-top: 0.25rem; }
 
-/* sa-meta-list (sin acordeón, mantiene estilos originales) */
 .sa-meta-list { display: flex; flex-direction: column; gap: 0.3rem; border-top: 1px solid var(--border-color); padding-top: 0.5rem; flex-shrink: 0; }
 .sa-meta-list__row { display: flex; align-items: baseline; gap: 0.35rem; font-size: 0.775rem; line-height: 1.4; }
 .sa-meta-list__key { color: var(--text-muted); font-weight: 600; white-space: nowrap; flex-shrink: 0; }
@@ -3127,7 +3348,7 @@
   z-index: 180;
   transform: translateX(-50%) translateY(100%);
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 720px;                    /* mismo que .audio-player */
+  width: 720px;
   max-width: calc(100vw - 2rem);
   filter: drop-shadow(0 -2px 16px rgba(0,0,0,0.18));
 }
@@ -3137,7 +3358,7 @@
 .sa-player-drawer .audio-player {
   position: static !important;
   transform: none !important;
-  width: 100% !important;          /* hereda los 720px del drawer */
+  width: 100% !important;
   min-width: unset !important;
   max-width: unset !important;
   border-radius: 16px 16px 0 0 !important;
@@ -3257,7 +3478,6 @@
 
 @keyframes sa-spin { to { transform: rotate(360deg); } }
 
-/* Modo upload sin análisis: sin altura fija */
 .sa-root:not(:has(.sa-two-col)) { height: auto; overflow: visible; }
 
 /* ── Responsive SA ── */
@@ -3282,9 +3502,10 @@
   .sa-stats__bar { flex: 1; min-width: 30px; }
   .sa-chat__bubble { max-width: 88%; font-size: 0.775rem; }
 }
-/* ============================================================================
+
+/* =============================================================================
    REPORTS PAGE
-   ============================================================================ */
+   ============================================================================= */
 
 .reports-page {
   display: flex;
@@ -3293,7 +3514,6 @@
   padding-bottom: 2rem;
 }
 
-/* ── Reports page header ── */
 .reports-page-header {
   display: flex;
   justify-content: space-between;
@@ -3315,7 +3535,6 @@
   white-space: nowrap;
 }
 
-/* filters toggle button */
 .reports-filters-toggle {
   width: 100%;
   display: flex;
@@ -3330,7 +3549,6 @@
 }
 .reports-filters-toggle:hover { background: rgba(255,255,255,0.03); }
 
-/* ── Mobile ── */
 @media (max-width: 600px) {
   .reports-page-header {
     flex-direction: column;
@@ -3347,7 +3565,6 @@
     min-width: 0;
   }
 
-  /* Hide text labels on very small screens, show only icons */
   @media (max-width: 380px) {
     .reports-header-actions .btn span {
       display: none;
@@ -3360,7 +3577,6 @@
   }
 }
 
-/* ── KPI Grid ── */
 .reports-kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -3420,27 +3636,9 @@
   50% { opacity: 0.4; }
 }
 
-/* ── Filters ── */
 .reports-filters-card {
   padding: 0;
   overflow: hidden;
-}
-
-.reports-filters-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.875rem 1.25rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-secondary);
-  transition: background 0.15s;
-}
-
-.reports-filters-toggle:hover {
-  background: rgba(255,255,255,0.03);
 }
 
 .reports-filters-body {
@@ -3493,7 +3691,6 @@
   padding-top: 0.125rem;
 }
 
-/* ── Charts Grid ── */
 .reports-charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
@@ -3533,12 +3730,10 @@
   margin: 0;
 }
 
-/* Word Cloud span 2 */
 .reports-charts-grid .card[style*="span 2"] {
   grid-column: span 2;
 }
 
-/* ── Table ── */
 .reports-table-card {
   padding: 1.25rem;
 }
@@ -3587,7 +3782,6 @@
   white-space: nowrap;
 }
 
-/* Recharts tooltip dark theme */
 .recharts-tooltip-wrapper .recharts-default-tooltip {
   background: var(--bg-card) !important;
   border: 1px solid var(--border-color) !important;
@@ -3615,25 +3809,13 @@
   }
 }
 
-
-
-
-
-
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Summary Accordion + Equal-height accordions
-   Agregar al final de la sección 8 (Speech Analytics) en _pages.css
-   ───────────────────────────────────────────────────────────────────────────── */
-
-/* ── Ambos acordeones comparten el espacio 50/50 cuando están abiertos ────── */
+/* ── Summary Accordion + Equal-height accordions ── */
 .sa-summary-accordion.sa-ind-card--open,
 .sa-ind-card--open {
-  flex: 1 1 0;            /* mismo peso → mismo alto */
+  flex: 1 1 0;
   min-height: 0;
 }
 
-/* Cuando el resumen está cerrado, no ocupa espacio extra */
 .sa-summary-accordion {
   min-height: 0;
 }
@@ -3642,7 +3824,6 @@
   flex: 0 0 auto;
 }
 
-/* ── Body scrollable del resumen ──────────────────────────────────────────── */
 .sa-summary-accordion__body {
   flex: 1;
   min-height: 0;
@@ -3659,3 +3840,572 @@
   border-top: none;
   padding-top: 0.25rem;
 }
+
+/* =============================================================================
+   RESPONSIVE FIXES — CallsView, ReportsView, SpeechAnalyticsView
+   ============================================================================= */
+
+.calls-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sa-header .calls-header__top {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sa-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.calls-page .calls-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.calls-page .calls-controls-row .calls-filters {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+  justify-content: flex-start;
+}
+
+.calls-page .calls-controls-row .calls-header__right {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .calls-page .calls-controls-row {
+    flex-direction: column-reverse;
+    align-items: center;
+  }
+
+  .calls-page .calls-controls-row .calls-header__right {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .calls-page .calls-controls-row .calls-filters {
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .calls-header__title {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .calls-header__new-btn {
+    font-size: 0.72rem;
+    padding: 0.3rem 0.65rem;
+  }
+}
+
+@media (min-width: 641px) {
+  .reports-page .calls-header {
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .reports-page .calls-header__top {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .reports-page .calls-header__right {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 640px) {
+  .reports-page .calls-header {
+    flex-direction: column;
+  }
+
+  .reports-page .calls-header__right {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+@media (min-width: 641px) {
+  .sa-header.calls-header {
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .sa-header .calls-header__top {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .sa-header.calls-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .sa-header .calls-header__top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  .sa-header__actions {
+    justify-content: flex-start;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .sa-header__actions > div {
+    align-items: flex-start !important;
+  }
+}
+
+.calls-filters {
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  .calls-filters {
+    gap: 0.3rem;
+  }
+
+  .call-filter-btn {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    gap: 0.25rem;
+  }
+}
+
+.calls-view-toggle {
+  display: flex !important;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .call-row {
+    grid-template-columns: 28px 1fr auto auto;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .call-row__meta    { display: none; }
+  .call-row__score   { font-size: 0.78rem; min-width: 2rem; padding: 0.1rem 0.35rem; }
+  .call-row__status  { display: none; }
+
+  .call-row__actions {
+    flex-shrink: 0;
+    gap: 0.15rem;
+  }
+
+  .call-row__title {
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .sa-left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    overflow: visible !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+
+  .sa-ind-card,
+  .sa-summary-accordion,
+  .sa-ind-card--open,
+  .sa-summary-accordion.sa-ind-card--open {
+    flex: 0 0 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .sa-summary-accordion__body {
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .sa-ind-list {
+    max-height: 320px !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .sa-ind-card {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .sa-summary-accordion__body {
+    max-height: 220px;
+  }
+
+  .sa-ind-list {
+    max-height: 280px !important;
+  }
+
+  .sa-ind-row {
+    padding: 0.45rem 0.625rem;
+    font-size: 0.78rem;
+  }
+}
+
+/* ── Barra de progreso indeterminada (análisis asíncrono) ── */
+@keyframes sa-progress-indeterminate {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(150%); }
+  100% { transform: translateX(350%); }
+}
+
+/* responsive fixes moved to inline grid definitions above */
+
+/* =============================================================================
+   RESPONSIVE FIXES — calls-grid y stat-cards (sin duplicar grid rules)
+   ============================================================================= */
+
+/* calls-grid: se aprieta con sidebar abierto */
+@media (max-width: 860px) {
+  .calls-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .calls-page  { padding: 1rem; }
+  .calls-grid  { grid-template-columns: 1fr; gap: 0.75rem; }
+  .call-card   { padding: 0.75rem; }
+  .call-card__meta   { grid-template-columns: 1fr; gap: 0.25rem; }
+  .call-card__footer { flex-wrap: wrap; gap: 0.375rem; }
+  .call-card__view-btn { flex: 1; justify-content: center; }
+  .calls-header  { flex-wrap: wrap; gap: 0.5rem; }
+  .calls-header__top { flex-wrap: wrap; gap: 0.5rem; }
+  .calls-page__actions { flex-wrap: wrap; gap: 0.375rem; }
+  .calls-summary { gap: 0.375rem; }
+
+  /* Stat card compacta en mobile */
+  .stat-card .dashboard-admin__stat-card,
+  .db-stat-card__body { padding: 0.625rem 0.5rem; gap: 0.375rem; }
+  .stat-card .dashboard-admin__stat-value,
+  .db-stat-card__value { font-size: 1.3rem; }
+}
+
+@media (max-width: 540px) {
+  .calls-header__right .btn,
+  .sa-header__actions .btn { font-size: 0.78rem; padding: 0.4rem 0.75rem; }
+}
+
+
+
+
+
+
+
+
+
+/* =============================================================================
+   BILLING PAGE — Agregar al final de pages.css
+   ============================================================================= */
+
+/* Grid de totales: 2 columnas mobile, 4 en desktop (admin tiene 4 items, cliente 2) */
+.billing-totals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .billing-totals-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+}
+
+/* ── Modal de configuración de billing — permite que el DatePicker salga ──────
+   .modal tiene overflow-y:auto que corta el DatePicker.
+   Esta clase lo sobreescribe para el modal de config de campaña. */
+.modal--overflow-visible {
+  overflow: visible !important;
+}
+
+.modal--overflow-visible .modal__body {
+  overflow: visible;
+}
+
+
+/* =============================================================================
+   DASHBOARD — Opción C (Panel ejecutivo)
+   Pegar al final de _pages.css, reemplazando el bloque "DASHBOARD ADDITIONS"
+   ============================================================================= */
+
+/* ── Grid de 4 columnas (compatibilidad billing grid si se usa) ── */
+.dashboard-grid { display: grid; gap: 0.75rem; }
+.dashboard-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 900px) { .dashboard-grid--4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .dashboard-grid--4 { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; } }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PANEL EJECUTIVO
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Contenedor principal ── */
+.db-executive {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
+
+/* ── Fila superior: welcome (flex:1) + score (180px fijo) ── */
+.db-executive__top {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* ── Panel de bienvenida ── */
+.db-executive__welcome {
+  padding: 20px 24px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Saludo ── */
+.db-executive__greeting { display: flex; flex-direction: column; gap: 3px; }
+.db-executive__name     { font-size: 2rem; font-weight: 700; color: var(--text-primary); }
+.db-executive__sub      { font-size: 0.8rem; color: var(--text-muted); }
+
+/* ── Chips en fila, wrap en mobile ── */
+.db-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.db-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 7px 13px;
+  border-radius: 20px;
+  transition: border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.db-chip__value { font-size: 20px; font-weight: 700; line-height: 1; }
+.db-chip__label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+/* ── Panel de score ── */
+.db-executive__score {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.db-executive__score:hover { background: rgba(44,146,230,0.04); }
+
+.db-executive__score-label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.04em; text-align: center; margin: 0; }
+.db-executive__score-value { font-size: 50px; font-weight: 700; line-height: 1; margin: 2px 0 0; }
+.db-executive__score-pct   { font-size: 22px; font-weight: 600; }
+.db-executive__score-tag   { font-size: 11px; margin: 0; }
+.db-executive__score-bar   { width: 76px; height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.db-executive__score-bar-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+/* ── Tira de billing ── */
+.db-executive__billing { padding: 0; }
+
+.db-billing-strip {
+  display: grid;
+  /* grid-template-columns se setea inline según cantidad de celdas */
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.db-billing-strip:hover { background: rgba(44,146,230,0.025); }
+
+.db-billing-strip__cell { padding: 12px 20px; }
+.db-billing-strip__label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin: 0 0 3px;
+}
+.db-billing-strip__value { font-size: 18px; font-weight: 700; line-height: 1; margin: 0; }
+.db-billing-strip__sub   { font-size: 11px; color: var(--text-muted); margin: 2px 0 0; }
+
+/* ── Banner de renovación ── */
+.db-renewal-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: var(--radius-md);
+}
+.db-renewal-banner__text {
+  flex: 1;
+  font-size: 0.82rem;
+  color: #b45309;
+  min-width: 0;
+}
+.db-renewal-banner__btn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #d97706;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: var(--radius-sm);
+  padding: 0.2rem 0.6rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+.db-renewal-banner__btn:hover { background: rgba(245,158,11,0.22); }
+
+/* ── Mini barra de score en filas de campaña ── */
+.db-campaign-score {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+  max-width: 110px;
+  flex-shrink: 0;
+}
+.db-campaign-score__bar {
+  flex: 1;
+  height: 3px;
+  background: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.db-campaign-score__value {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Tablet ancho (860px): score se achica un poco */
+@media (max-width: 860px) {
+  .db-executive__top   { grid-template-columns: 1fr 150px; }
+  .db-executive__score { padding: 16px 10px; }
+  .db-executive__score-value { font-size: 42px; }
+}
+
+/* Tablet chico (640px): score baja abajo de los chips */
+@media (max-width: 640px) {
+  .db-executive__top {
+    grid-template-columns: 1fr;         /* stack vertical */
+  }
+  .db-executive__welcome {
+    padding: 16px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+  /* Score en fila compacta al lado del label */
+  .db-executive__score {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-top: none;                   /* la línea ya está en welcome */
+  }
+  .db-executive__score-label { text-align: left; }
+  .db-executive__score-bar   { width: 60px; }
+}
+
+/* Mobile (480px): billing strip 2 columnas en admin */
+@media (max-width: 480px) {
+  .db-executive__welcome { padding: 14px; gap: 12px; }
+  .db-chip               { padding: 6px 11px; }
+  .db-chip__value        { font-size: 18px; }
+
+  /* Admin (4 celdas) → 2x2 */
+  .db-billing-strip {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  /* 3er y 4to item: borde superior */
+  .db-billing-strip__cell:nth-child(3),
+  .db-billing-strip__cell:nth-child(4) {
+    border-top: 1px solid var(--border-color);
+  }
+  /* Restablecer border-right del 3er item para layout 2x2 */
+  .db-billing-strip__cell:nth-child(3) {
+    border-right: 1px solid var(--border-color);
+  }
+  /* 4to item sin border-right */
+  .db-billing-strip__cell:nth-child(4) {
+    border-right: none !important;
+  }
+  /* 2do item (col derecha) sin border-right inline */
+  .db-billing-strip__cell:nth-child(2) {
+    border-right: none !important;
+  }
+
+  .db-billing-strip__cell { padding: 10px 14px; }
+  .db-billing-strip__value { font-size: 16px; }
+
+  /* Ocultar la mini barra en mobile para ahorrar espacio */
+  .db-campaign-score { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BILLING PAGE (billing-additions.css integrado aquí para un solo import)
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.billing-totals-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 640px) {
+  .billing-totals-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+}
+
+/* Modal config: permite que el DatePicker salga sin ser clippeado */
+.modal--overflow-visible             { overflow: visible !important; }
+.modal--overflow-visible .modal__body { overflow: visible; }

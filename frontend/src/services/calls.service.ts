@@ -32,4 +32,16 @@ export const callsService = {
 
   getDashboardStats: (): Promise<any> =>
     api.get('/calls/stats/dashboard').then(r => r.data),
+
+  /**
+   * Consulta el estado del job de análisis asíncrono para una llamada.
+   * Útil para hacer polling desde la UI cuando el análisis está en curso.
+   */
+  getJobStatus: (callId: string): Promise<{
+    callId: string
+    status: string
+    analysisJobId: string | null
+    hasResult: boolean
+  }> =>
+    api.get(`/calls/${callId}/job-status`).then(r => r.data),
 }

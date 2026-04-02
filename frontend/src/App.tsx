@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard'
 import { SpeechAnalyticsView } from './pages/SpeechAnalyticsView'
 import { CampaignsView } from './pages/CampaignsView'
 import { ReportsView } from './pages/ReportsView'
+import { BillingView } from './pages/BillingView'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import './App.css'
 
@@ -36,6 +37,9 @@ function App() {
             <ReportsView />
           </ProtectedRoute>
         } />
+
+        {/* Facturación — visible para todos los usuarios autenticados */}
+        <Route path="billing" element={<BillingView />} />
 
         {/* Configuraciones — requiere algún permiso de gestión */}
         <Route path="settings/*" element={

@@ -1,5 +1,5 @@
 import api from './api'
-import type { Campaign, CreateCampaignDto, UpdateCampaignDto } from '../types/campaigns.types'
+import type { Campaign, CreateCampaignDto, MinutesSummary, UpdateCampaignDto } from '../types/campaigns.types'
 
 export const campaignsService = {
   async findAll(): Promise<Campaign[]> {
@@ -24,5 +24,10 @@ export const campaignsService = {
 
   async remove(id: string): Promise<void> {
     await api.delete(`/campaigns/${id}`)
+  },
+
+  async getMinutesSummary(id: string): Promise<MinutesSummary> {
+    const res = await api.get<MinutesSummary>(`/campaigns/${id}/minutes-summary`)
+    return res.data
   },
 }

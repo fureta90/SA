@@ -8,9 +8,10 @@ import FormData from 'form-data'
 import axios from 'axios'
 import { Call, CallStatus } from '../entities/call.entity'
 import { Campaign } from '../../campaigns/entities/campaign.entity'
+import { AnalysisQueueProducer } from '../queues/analysis-queue.producer'
 
-const UPLOAD_URL   = 'https://audio-processor-788612607917.us-central1.run.app/process'
-const UPLOAD_TOKEN = process.env.SPEECH_UPLOAD_TOKEN || ''
+const UPLOAD_URL   = `${process.env.SPEECH_PRODUCER_URL || 'https://speech-analytics-producer-kku6uewffq-uc.a.run.app'}/upload`
+const UPLOAD_TOKEN = process.env.SPEECH_ANALYZE_TOKEN || 'SAFindControl2026'
 
 function toAbsPath(p: string): string {
   if (isAbsolute(p)) return p
@@ -24,6 +25,7 @@ export class UploadWorker {
   constructor(
     @InjectRepository(Call)     private callsRepo: Repository<Call>,
     @InjectRepository(Campaign) private campaignsRepo: Repository<Campaign>,
+    private readonly analysisProducer: AnalysisQueueProducer,
   ) {}
 
   @Cron(CronExpression.EVERY_SECOND)
@@ -40,7 +42,6 @@ export class UploadWorker {
   }
 
   private async processCall(call: Call) {
-    // ── Verificar que la campaña exista y esté activa ────────────────────────
     const campaign = await this.campaignsRepo.findOne({
       where: { id: call.campaignId },
     })
@@ -70,7 +71,6 @@ export class UploadWorker {
 
       this.logger.log(`Iniciando upload para ${call.id} (${absPath})`)
 
-      // ── Subir a Google Cloud vía audio-processor ──────────────────────────
       const form = new FormData()
       form.append('file', createReadStream(absPath))
       form.append('call_id', call.id)
@@ -89,7 +89,6 @@ export class UploadWorker {
 
       this.logger.log(`Respuesta recibida: ${JSON.stringify(data)}`)
 
-      // ── Eliminar archivo temporal del servidor ────────────────────────────
       try {
         unlinkSync(absPath)
         this.logger.log(`Archivo temporal eliminado: ${absPath}`)
@@ -97,17 +96,20 @@ export class UploadWorker {
         this.logger.warn(`No se pudo eliminar temporal ${absPath}: ${unlinkErr.message}`)
       }
 
-      // ── Actualizar BD — solo guardamos la URI de GCS ──────────────────────
       const gcsUri = data.gcs_uri ?? data.audio_uri
 
       await this.callsRepo.update(call.id, {
         status:        CallStatus.UPLOADED,
         audioUri:      gcsUri,
         callId:        data.call_id,
-        audioTempPath: null, // ya no se guarda nada local
+        audioTempPath: null,
       })
 
       this.logger.log(`✓ Upload OK: ${call.id} → ${gcsUri}`)
+
+      // Encolar en BullMQ → AnalysisQueueProcessor hace POST /analyze → polling → GET /result
+      await this.analysisProducer.enqueue(call.id)
+      this.logger.log(`[Queue] Analysis job enqueued for call ${call.id}`)
 
     } catch (err: any) {
       const status = err.response?.status
@@ -121,10 +123,6 @@ export class UploadWorker {
     }
   }
 
-  /**
-   * Resuelve la ruta absoluta del archivo temporal.
-   * Intenta la ruta directa; si no existe, busca en uploads/audio como fallback.
-   */
   private resolveAudioPath(audioTempPath: string): string {
     let absPath = toAbsPath(audioTempPath)
 

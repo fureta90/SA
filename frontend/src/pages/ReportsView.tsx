@@ -965,22 +965,26 @@ ${indicatorRankingData.length > 0 ? `
   return (
     <div className="reports-page">
 
-      {/* ── Header — SpeechAnalyticsView style ── */}
+      {/* ── Header ── */}
       <div className="calls-header" style={{ marginBottom: '1rem' }}>
-        <div className="calls-header__left">
-          <button className="calls-header__back" onClick={handleBack} title={t.actions.close}>
-            <ArrowLeft size={16} />
-          </button>
-          <div>
-            <h2 className="calls-header__title">{t.reports.title}</h2>
-            <p className="calls-header__sub">{t.reports.subtitle}</p>
+        {/* Fila 1: título */}
+        <div className="calls-header__top">
+          <div className="calls-header__left">
+            <button className="calls-header__back" onClick={handleBack} title={t.actions.close}>
+              <ArrowLeft size={16} />
+            </button>
+            <div>
+              <h2 className="calls-header__title">{t.reports.title}</h2>
+              <p className="calls-header__sub">{t.reports.subtitle}</p>
+            </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Fila 2: controles centrados */}
+        <div className="calls-header__right">
           {/* Refresh */}
           <button
-            className="calls-header__back"
+            className="calls-header__icon-btn"
             onClick={loadData}
             disabled={loading}
             title={loading ? t.actions.loading : t.actions.search}
@@ -990,25 +994,18 @@ ${indicatorRankingData.length > 0 ? `
 
           {/* Filter */}
           <button
-            className="calls-header__back"
+            className={`calls-header__icon-btn${hasActiveFilters ? ' calls-header__icon-btn--active' : ''}`}
             onClick={() => setFiltersOpen(true)}
             title={t.reports.filtersTitle}
             style={{ position: 'relative' }}
           >
             <Filter size={15} />
-            {hasActiveFilters && (
-              <span style={{
-                position: 'absolute', top: '-2px', right: '-2px',
-                width: '8px', height: '8px', borderRadius: '50%',
-                background: 'var(--color-primary)',
-                border: '2px solid var(--bg-card)',
-              }} />
-            )}
+            {hasActiveFilters && <span className="calls-header__filter-dot"/>}
           </button>
 
           {/* Export Excel */}
           <button
-            className="calls-header__back"
+            className="calls-header__icon-btn"
             onClick={handleExportXlsx}
             disabled={exporting !== null || filteredCalls.length === 0}
             title={exporting === 'xlsx' ? t.reports.exporting : t.reports.exportXlsx}
@@ -1022,7 +1019,7 @@ ${indicatorRankingData.length > 0 ? `
 
           {/* Export PDF */}
           <button
-            className="calls-header__back"
+            className="calls-header__icon-btn"
             onClick={handleExportPdf}
             disabled={exporting !== null || filteredCalls.length === 0}
             title={exporting === 'pdf' ? t.reports.exporting : t.reports.exportPdf}
@@ -1035,7 +1032,7 @@ ${indicatorRankingData.length > 0 ? `
           </button>
 
           {/* View toggle */}
-          <div className="calls-view-toggle" style={{ marginLeft: '0.25rem' }}>
+          <div className="calls-view-toggle">
             <button
               className={`calls-view-toggle__btn ${viewMode === 'grid' ? 'calls-view-toggle__btn--active' : ''}`}
               onClick={() => setViewMode('grid')}
@@ -1149,10 +1146,10 @@ ${indicatorRankingData.length > 0 ? `
         {/* ── KPI Cards ── */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px,1fr))', gap:'1rem' }}>
           {[
-            { label:t.reports.totalCalls,    value:filteredCalls.length, icon:<Mic size={36} style={{ color:'var(--color-primary)' }}/>, cls:'stat-card--blue'   },
-            { label:t.reports.analyzedCalls, value:analyzedCalls.length, icon:<CheckCircle size={36} style={{ color:'#059669' }}/>,     cls:'stat-card--green'  },
-            { label:t.reports.avgScore,      value:avgScore?`${avgScore}%`:'—', icon:<TrendingUp size={36} style={{ color:'#0891b2' }}/>, cls:'stat-card--cyan'  },
-            { label:t.reports.avgDuration,   value:avgDuration??'—',     icon:<Clock size={36} style={{ color:'#d97706' }}/>,            cls:'stat-card--orange' },
+            { label:t.reports.totalCalls,    value:filteredCalls.length, icon:<Mic size={20} style={{ color:'var(--color-primary)' }}/>, cls:'stat-card--blue'   },
+            { label:t.reports.analyzedCalls, value:analyzedCalls.length, icon:<CheckCircle size={20} style={{ color:'#059669' }}/>,      cls:'stat-card--green'  },
+            { label:t.reports.avgScore,      value:avgScore?`${avgScore}%`:'—', icon:<TrendingUp size={20} style={{ color:'#0891b2' }}/>, cls:'stat-card--cyan'  },
+            { label:t.reports.avgDuration,   value:avgDuration??'—',     icon:<Clock size={20} style={{ color:'#d97706' }}/>,             cls:'stat-card--orange' },
           ].map(({ label, value, icon, cls }) => (
             <div key={label} className={`stat-card ${cls}`}>
               <div className="dashboard-admin__stat-card">

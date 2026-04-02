@@ -6,6 +6,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   BarChart2, Calendar, Check, ChevronDown, ChevronLeft, ChevronRight,
+  RotateCcw,
   Clock, Mic, Phone, PhoneIncoming, RefreshCw, Search, Trash2, User, X,
 } from 'lucide-react'
 import { useLang } from '../context/LangContext'
@@ -289,6 +290,7 @@ export const CallCard: React.FC<CallCardProps> = ({ call, onDelete, onViewAnalys
         <span className="call-card__date">{formatDate(call.createdAt)}</span>
         <div className="call-card__footer-actions">
           {isAnalyzed && <button className="call-card__icon-btn call-card__icon-btn--analyze" onClick={onViewAnalysis} title={t.speech.analysisResult}><BarChart2 size={14}/></button>}
+          {isAnalyzed && onRetry && <button className="call-card__icon-btn call-card__icon-btn--reanalyze" onClick={onRetry} title="Re-analizar con Gemini"><RotateCcw size={14}/></button>}
           {call.status === 'ERROR' && onRetry && <button className="call-card__icon-btn call-card__icon-btn--retry" onClick={onRetry} title={t.actions.confirm}><RefreshCw size={14}/></button>}
           {onDelete && <button className="call-card__icon-btn call-card__icon-btn--delete" onClick={onDelete} title={t.actions.delete}><Trash2 size={14}/></button>}
         </div>
@@ -352,6 +354,7 @@ export const CallRow: React.FC<CallCardProps> = ({ call, onDelete, onViewAnalysi
       </span>
       <div className="call-row__actions" onClick={e => e.stopPropagation()}>
         {isAnalyzed && <button className="call-card__icon-btn call-card__icon-btn--analyze" onClick={onViewAnalysis}><BarChart2 size={13}/></button>}
+        {isAnalyzed && onRetry && <button className="call-card__icon-btn call-card__icon-btn--reanalyze" onClick={onRetry} title="Re-analizar con Gemini"><RotateCcw size={13}/></button>}
         {call.status === 'ERROR' && onRetry && <button className="call-card__icon-btn call-card__icon-btn--retry" onClick={onRetry}><RefreshCw size={13}/></button>}
         {onDelete && <button className="call-card__icon-btn call-card__icon-btn--delete" onClick={onDelete}><Trash2 size={13}/></button>}
       </div>

@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
@@ -13,6 +14,8 @@ import { CampaignUser } from './entities/campaign-user.entity'
 
 @Injectable()
 export class CampaignsService {
+  private readonly logger = new Logger(CampaignsService.name)
+
   constructor(
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
@@ -35,16 +38,22 @@ export class CampaignsService {
     )
 
     const campaign = this.campaignRepository.create({
-      name:        createCampaignDto.name,
-      prompt:      createCampaignDto.prompt,
-      imageUrl:    createCampaignDto.imageUrl,
-      isActive:    createCampaignDto.isActive ?? true,
-      indicadores: indicators,
+      name:                createCampaignDto.name,
+      prompt:              createCampaignDto.prompt,
+      imageUrl:            createCampaignDto.imageUrl,
+      isActive:            createCampaignDto.isActive ?? true,
+      indicadores:         indicators,
+      minutesLimitEnabled: createCampaignDto.minutesLimitEnabled ?? false,
+      minutesLimit:        createCampaignDto.minutesLimit ?? null,
+      minutesConsumed:     0,
+      inactivatedByLimit:  false,
+      pricePerMinute:      createCampaignDto.pricePerMinute ?? null,
+      periodStartDate:     createCampaignDto.periodStartDate ? new Date(createCampaignDto.periodStartDate) : null,
+      periodDays:          createCampaignDto.periodDays ?? 30,
     })
 
     const saved = await this.campaignRepository.save(campaign)
 
-    // Guardar usuarios permitidos
     if (createCampaignDto.allowedUserIds && createCampaignDto.allowedUserIds.length > 0) {
       await this.syncCampaignUsers(saved.id, createCampaignDto.allowedUserIds)
     }
@@ -62,7 +71,6 @@ export class CampaignsService {
       return this.findAllWithUsers()
     }
 
-    // Obtener IDs de campañas permitidas para este usuario
     const allowedCampaignIds = await this.getAllowedCampaignIds(userId)
 
     if (allowedCampaignIds.length === 0) {
@@ -154,9 +162,32 @@ export class CampaignsService {
       )
     }
 
+    // ── Límite de minutos ──────────────────────────────────────────────────
+    if (updateCampaignDto.minutesLimitEnabled !== undefined) {
+      campaign.minutesLimitEnabled = updateCampaignDto.minutesLimitEnabled
+    }
+
+    if (updateCampaignDto.minutesLimit !== undefined) {
+      campaign.minutesLimit = updateCampaignDto.minutesLimit
+    }
+
+    // ── Facturación y período ──────────────────────────────────────────────
+    if (updateCampaignDto.pricePerMinute !== undefined) {
+      campaign.pricePerMinute = updateCampaignDto.pricePerMinute
+    }
+
+    if (updateCampaignDto.periodStartDate !== undefined) {
+      campaign.periodStartDate = updateCampaignDto.periodStartDate
+        ? new Date(updateCampaignDto.periodStartDate)
+        : null
+    }
+
+    if (updateCampaignDto.periodDays !== undefined) {
+      campaign.periodDays = updateCampaignDto.periodDays
+    }
+
     await this.campaignRepository.save(campaign)
 
-    // Sincronizar usuarios permitidos si se proporcionan
     if (updateCampaignDto.allowedUserIds !== undefined) {
       await this.syncCampaignUsers(id, updateCampaignDto.allowedUserIds)
     }
@@ -169,18 +200,84 @@ export class CampaignsService {
     await this.campaignRepository.remove(campaign)
   }
 
+  // ── Lógica de minutos ────────────────────────────────────────────────────
+
+  /**
+   * Suma minutos transcriptos a una campaña y la inactiva automáticamente
+   * si supera el límite configurado.
+   *
+   * Llamar desde el worker de análisis al completar una transcripción,
+   * pasando la duración en SEGUNDOS de la llamada.
+   *
+   * @param campaignId  UUID de la campaña
+   * @param durationSec Duración de la llamada en segundos
+   */
+  async addMinutesConsumed(campaignId: string, durationSec: number): Promise<void> {
+    const campaign = await this.findOne(campaignId)
+
+    const minutesToAdd = durationSec / 60
+    const newConsumed  = (campaign.minutesConsumed ?? 0) + minutesToAdd
+
+    const update: Partial<Campaign> = { minutesConsumed: newConsumed }
+
+    // Auto-inactivar si el límite está habilitado y se superó
+    if (
+      campaign.minutesLimitEnabled &&
+      campaign.minutesLimit !== null &&
+      campaign.minutesLimit !== undefined &&
+      newConsumed >= campaign.minutesLimit &&
+      campaign.isActive
+    ) {
+      update.isActive          = false
+      update.inactivatedByLimit = true
+      this.logger.warn(
+        `[MinutesLimit] Campaña "${campaign.name}" (${campaignId}) inactivada automáticamente — consumido: ${newConsumed.toFixed(1)} min / límite: ${campaign.minutesLimit} min`,
+      )
+    }
+
+    await this.campaignRepository.update(campaignId, update)
+  }
+
+  /**
+   * Devuelve el resumen de consumo de minutos para una campaña.
+   * Útil para el endpoint GET /campaigns/:id/minutes-summary
+   */
+  async getMinutesSummary(id: string): Promise<{
+    minutesLimitEnabled: boolean
+    minutesLimit:        number | null
+    minutesConsumed:     number
+    minutesRemaining:    number | null
+    percentUsed:         number | null
+    limitReached:        boolean
+  }> {
+    const campaign = await this.findOne(id)
+    const consumed  = campaign.minutesConsumed ?? 0
+    const limit     = campaign.minutesLimit ?? null
+
+    const minutesRemaining = limit !== null ? Math.max(0, limit - consumed)   : null
+    const percentUsed      = limit !== null ? Math.min(100, (consumed / limit) * 100) : null
+    const limitReached     = limit !== null ? consumed >= limit                : false
+
+    return {
+      minutesLimitEnabled: campaign.minutesLimitEnabled,
+      minutesLimit:        limit,
+      minutesConsumed:     consumed,
+      minutesRemaining,
+      percentUsed,
+      limitReached,
+    }
+  }
+
   // ── Helpers internos ─────────────────────────────────────────────────────
 
   private async syncCampaignUsers(campaignId: string, userIds: string[]): Promise<void> {
-    // Eliminar todos los registros actuales
     await this.campaignUserRepository.delete({ campaign: { id: campaignId } })
 
-    // Crear nuevos registros
     if (userIds.length > 0) {
       const entries = userIds.map((userId) =>
         this.campaignUserRepository.create({
           campaign: { id: campaignId } as any,
-          user: { id: userId } as any,
+          user:     { id: userId }     as any,
         }),
       )
       await this.campaignUserRepository.save(entries)

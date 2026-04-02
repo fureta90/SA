@@ -1,7 +1,7 @@
 import {
   Controller, Post, Get, Delete, Patch,
   Param, Body, UseGuards, UseInterceptors,
-  UploadedFile, BadRequestException, Req,
+  UploadedFile, BadRequestException, Req, HttpCode,
 } from '@nestjs/common'
 import { FileInterceptor } from '@nestjs/platform-express'
 import { diskStorage } from 'multer'
@@ -13,6 +13,7 @@ import { PermissionsGuard } from '../common/guards/permissions.guard'
 import { Permissions } from '../common/decorators/permissions.decorator'
 import { CallsService } from './calls.service'
 import { CreateCallDto } from './dto/create-call.dto'
+import { CreateCallBase64Dto } from './dto/create-call-base64.dto'
 import { CreateIndicatorReviewDto } from './dto/create-indicator-review.dto'
 import { AuditCallDto } from './dto/audit-call.dto'
 import { CampaignsService } from '../campaigns/campaigns.service'
@@ -28,6 +29,63 @@ export class CallsController {
     private readonly campaignsService: CampaignsService,
     private readonly rolesService: RolesService,
   ) {}
+
+  // ── WEBHOOK DE ANÁLISIS ASÍNCRONO ────────────────────────────────────────────
+
+  /**
+   * POST /calls/webhook/analysis-complete
+   * Recibe la notificación de la API externa cuando un job termina.
+   * El body puede incluir el job_id y metadata.callDbId para identificar la llamada.
+   * No requiere JWT — la autenticación se hace por shared secret (opcional).
+   */
+  @Post('webhook/analysis-complete')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Webhook: notificación de análisis completado' })
+  async analysisWebhook(@Body() body: any) {
+    const jobId    = body?.job_id    ?? body?.jobId
+    const callDbId = body?.metadata?.callDbId ?? body?.callDbId
+
+    if (!jobId) {
+      return { ok: false, error: 'job_id requerido' }
+    }
+
+    if (!callDbId) {
+      const call = await this.callsService.findByAnalysisJobId(jobId)
+      if (call) {
+        await this.callsService.handleWebhookResult(call.id, jobId)
+        return { ok: true }
+      }
+      return { ok: false, error: 'No se encontró la llamada para este job_id' }
+    }
+
+    await this.callsService.handleWebhookResult(callDbId, jobId)
+    return { ok: true }
+  }
+
+  /**
+   * GET /calls/:id/job-status
+   * Devuelve el estado actual del job de análisis para una llamada específica.
+   */
+  @Get(':id/job-status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Estado del job de análisis asíncrono' })
+  async getJobStatus(@Param('id') id: string) {
+    return this.callsService.getAnalysisJobStatus(id)
+  }
+
+  @Post('base64')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('add_campaigns')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Crear registro de llamada con audio en base64' })
+  async createFromBase64(@Body() dto: CreateCallBase64Dto) {
+    console.log(JSON.stringify({
+    dto,
+    audioBase64: dto.audioBase64 ? `[BASE64 ${dto.audioBase64.length} chars]` : 'VACÍO'
+  }, null, 2))
+    return this.callsService.createFromBase64(dto)
+  }
 
   // ── CRUD básico ──────────────────────────────────────────────────────────────
 

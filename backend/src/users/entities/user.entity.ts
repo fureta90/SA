@@ -40,11 +40,38 @@ export class User {
   @Column({ default: true })
   isActive: boolean
 
+  // ── Facturación ───────────────────────────────────────────────────────────
+
+  /** Precio por minuto transcripto que se le cobra a este cliente */
+  @Column({ type: 'float', nullable: true })
+  pricePerMinute: number | null
+
+  /** Límite global de minutos por período para TODAS las campañas del cliente */
+  @Column({ type: 'int', nullable: true })
+  globalMinutesLimit: number | null
+
+  // ── Período de renovación ─────────────────────────────────────────────────
+
+  /**
+   * Fecha de inicio del período actual.
+   * null = sin período configurado (los minutos no se resetean).
+   * El cron corre cada noche y renueva cuando now >= periodStartDate + periodDays.
+   */
+  @Column({ type: 'datetime', nullable: true })
+  periodStartDate: Date | null
+
+  /**
+   * Duración del período en días (default: 30).
+   * Permite configurar períodos de 28, 30 o 31 días según el cliente.
+   */
+  @Column({ type: 'int', default: 30 })
+  periodDays: number
+
   @ManyToMany(() => Role, { eager: false })
   @JoinTable({
     name: 'user_roles',
-    joinColumn:        { name: 'user_id',  referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'role_id',  referencedColumnName: 'id' },
+    joinColumn:        { name: 'user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
   })
   roles: Role[]
 

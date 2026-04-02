@@ -122,7 +122,8 @@ export class AuthService {
         resetToken: token,
       };
     } else {
-      const link = `https://correos.findcontrol.info/reset-password?token=${token}`;
+      const urlApp = this.configService.get<string>('URL_APP') ?? 'https://axium.findcontrol.info';
+      const link = `${urlApp}/reset-password?token=${token}`;
       await this.mailService.sendPasswordReset(user.email, link);
       return {
         message: 'Se envió un correo para restablecer la contraseña',

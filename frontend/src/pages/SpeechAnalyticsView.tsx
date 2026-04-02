@@ -12,6 +12,7 @@ import {
   speechAnalyticsService,
   type UploadAudioResponse,
   type AnalyzeAudioResponse,
+  type AnalysisProgress,
 } from '../services/speechanalytics.service'
 import { callsService } from '../services/calls.service'
 import { useLang } from '../context/LangContext'
@@ -274,13 +275,14 @@ interface SpeechAnalyticsViewProps {
   callName?: string
   audioUrl?: string
   callId?: string
+  duracionSegundos?: number | null
   onBack?: () => void
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export const SpeechAnalyticsView: React.FC<SpeechAnalyticsViewProps> = ({
-  analysisResult, callName, audioUrl, callId, onBack,
+  analysisResult, callName, audioUrl, callId, onBack, duracionSegundos
 }) => {
   const fileInputRef     = useRef<HTMLInputElement>(null)
   const floatingAudioRef = useRef<HTMLAudioElement>(null)
@@ -291,8 +293,9 @@ export const SpeechAnalyticsView: React.FC<SpeechAnalyticsViewProps> = ({
   const [analyzeData, setAnalyzeData]   = useState<AnalyzeAudioResponse | null>(
     analysisResult ? (() => { try { return JSON.parse(analysisResult) } catch { return null } })() : null
   )
-  const [isUploading, setIsUploading]   = useState(false)
   const [isAnalyzing, setIsAnalyzing]   = useState(false)
+  const [isUploading, setIsUploading]   = useState(false)  // solo upload standalone (no usado en flujo combinado)
+  const [analysisProgress, setAnalysisProgress] = useState<AnalysisProgress | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [uploadedBlobUrl, setUploadedBlobUrl] = useState<string | null>(null)
 
@@ -407,27 +410,71 @@ export const SpeechAnalyticsView: React.FC<SpeechAnalyticsViewProps> = ({
     if (uploadedBlobUrl) URL.revokeObjectURL(uploadedBlobUrl)
     setUploadedBlobUrl(URL.createObjectURL(file))
     setSelectedFile(file)
-    setUploadData(null); setAnalyzeData(null); setLocalOverrides({})
+    setUploadData(null); setAnalyzeData(null); setLocalOverrides({}); setAnalysisProgress(null)
+  }
+
+  // Indicadores fijos para modo standalone (sin campaña)
+  const INDICADORES_STANDALONE = [
+    { INDICADOR: 'Saludo cordial',          Puntaje_Si_Hace: 10, Puntaje_No_Hace: 0 },
+    { INDICADOR: 'Identificación personal', Puntaje_Si_Hace: 10, Puntaje_No_Hace: 0 },
+    { INDICADOR: 'Escucha activa',          Puntaje_Si_Hace: 15, Puntaje_No_Hace: 0 },
+    { INDICADOR: 'Ofrece soluciones',       Puntaje_Si_Hace: 20, Puntaje_No_Hace: 0 },
+    { INDICADOR: 'Despedida profesional',   Puntaje_Si_Hace: 10, Puntaje_No_Hace: 0 },
+  ]
+
+  /**
+   * Flujo combinado: un solo botón — sube + analiza.
+   * 1. POST /upload  → gcs_uri
+   * 2. POST /analyze → job_id  (respuesta inmediata, PENDING)
+   * 3. Polling GET /status/{job_id} cada 4s hasta COMPLETED
+   * 4. GET /result/{job_id} → muestra transcripción e indicadores
+   */
+  const handleAnalyze = async () => {
+    if (!selectedFile) return
+    setIsAnalyzing(true)
+    setAnalysisProgress({ phase: 'uploading', message: 'Subiendo audio...' })
+
+    try {
+      const callId = `manual-${Date.now()}`
+
+      const result = await speechAnalyticsService.analyzeAudio(
+        selectedFile,
+        callId,
+        INDICADORES_STANDALONE,
+        (progress) => setAnalysisProgress(progress),
+      )
+
+      setAnalyzeData(result)
+      setAnalysisProgress(null)
+
+    } catch (err: any) {
+      setAnalysisProgress(null)
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al analizar',
+        text: err?.message ?? 'No se pudo procesar el audio',
+        confirmButtonColor: '#dc2626',
+      })
+    } finally {
+      setIsAnalyzing(false)
+    }
   }
 
   const handleUpload = async () => {
     if (!selectedFile) return
     setIsUploading(true)
-    try { const res = await speechAnalyticsService.uploadAudio(selectedFile); setUploadData(res) }
-    catch { Swal.fire({ icon: 'error', title: 'Error al subir', text: 'No se pudo procesar el audio', confirmButtonColor: '#dc2626' }) }
-    finally { setIsUploading(false) }
-  }
-
-  const handleAnalyze = async () => {
-    if (!uploadData?.gcs_uri) return
-    setIsAnalyzing(true)
-    try { const res = await speechAnalyticsService.analyzeAudio(uploadData.gcs_uri); setAnalyzeData(res) }
-    catch { Swal.fire({ icon: 'error', title: 'Error al analizar', text: 'No se pudo obtener la transcripción', confirmButtonColor: '#dc2626' }) }
-    finally { setIsAnalyzing(false) }
+    try {
+      const res = await speechAnalyticsService.uploadAudio(selectedFile)
+      setUploadData(res)
+    } catch {
+      Swal.fire({ icon: 'error', title: 'Error al subir', text: 'No se pudo procesar el audio', confirmButtonColor: '#dc2626' })
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleReset = () => {
-    setSelectedFile(null); setUploadData(null); setAnalyzeData(null); setLocalOverrides({})
+    setSelectedFile(null); setUploadData(null); setAnalyzeData(null); setLocalOverrides({}); setAnalysisProgress(null)
     if (uploadedBlobUrl) { URL.revokeObjectURL(uploadedBlobUrl); setUploadedBlobUrl(null) }
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -474,8 +521,8 @@ export const SpeechAnalyticsView: React.FC<SpeechAnalyticsViewProps> = ({
   const indicadores = analyzeData?.indicadores_calidad ?? []
   const effectiveInds = indicadores.map((ind, i) => getEffectiveInd(ind, i))
 
-  const puntajeTotal = effectiveInds.reduce((a, i) => a + i.puntaje_asignado, 0)
-  const puntajeMax   = effectiveInds.reduce((a, i) => a + i.Puntaje_Si_Hace, 0)
+  const puntajeTotal = effectiveInds.filter(i => i.aplica !== false).reduce((a, i) => a + i.puntaje_asignado, 0)
+  const puntajeMax   = effectiveInds.filter(i => i.aplica !== false).reduce((a, i) => a + i.Puntaje_Si_Hace, 0)
   const scorePct     = puntajeMax > 0 ? Math.round((puntajeTotal / puntajeMax) * 100) : 0
 
   const indQueAplican = effectiveInds.filter(i => i.aplica)
@@ -493,15 +540,16 @@ export const SpeechAnalyticsView: React.FC<SpeechAnalyticsViewProps> = ({
     <div className={`sa-root${playerOpen ? ' sa-root--player-open' : ''}`}>
 
       {/* Header */}
-      <div className="calls-header" style={{ marginBottom: '1rem' }}>
-        <div className="calls-header__left">
-          {onBack && <button className="calls-header__back" onClick={onBack} {...{title: t.actions.close}}><ArrowLeft size={16} /></button>}
-          <div>
-            <h2 className="calls-header__title">{isReadOnly ? (callName || t.speech.analysisResult) : t.speech.title}</h2>
-            {isReadOnly && <p className="calls-header__sub">{t.speech.analysisResult}</p>}
+      <div className="calls-header sa-header" style={{ marginBottom: '1rem' }}>
+        <div className="calls-header__top">
+          <div className="calls-header__left">
+            {onBack && <button className="calls-header__back" onClick={onBack} {...{title: t.actions.close}}><ArrowLeft size={16} /></button>}
+            <div>
+              <h2 className="calls-header__title">{isReadOnly ? (callName || t.speech.analysisResult) : t.speech.title}</h2>
+              {isReadOnly && <p className="calls-header__sub">{t.speech.analysisResult}</p>}
+            </div>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <div className="sa-header__actions">
           {/* Botón auditar — solo visible en modo lectura con análisis completado */}
           {isReadOnly && analyzeData && callId && (() => {
             const isAudited = callStatus === 'AUDITED'
@@ -544,6 +592,7 @@ export const SpeechAnalyticsView: React.FC<SpeechAnalyticsViewProps> = ({
               <RotateCcw size={14} /> {t.speech.newAudio}
             </button>
           )}
+          </div>
         </div>
       </div>
 
@@ -561,18 +610,68 @@ export const SpeechAnalyticsView: React.FC<SpeechAnalyticsViewProps> = ({
           </div>
 
           <div className="sa-actions">
-            <button className="btn btn-primary" onClick={handleUpload} disabled={!selectedFile || isUploading}>
-              {isUploading ? <><span className="sa-spinner" /> {t.speech.processing}</> : <><Upload size={16} /> {t.speech.uploadAudio}</>}
-            </button>
-            <button className="btn btn-primary" onClick={handleAnalyze} disabled={!uploadData || isAnalyzing}>
-              {isAnalyzing ? <><span className="sa-spinner" /> {t.speech.analyzing}</> : <><Mic size={16} /> {t.speech.transcribe}</>}
+            {/* Un solo botón: sube el audio y lanza el análisis asíncrono */}
+            <button className="btn btn-primary" onClick={handleAnalyze} disabled={!selectedFile || isAnalyzing}>
+              {isAnalyzing
+                ? <><span className="sa-spinner" /> {analysisProgress?.message ?? 'Analizando...'}</>
+                : <><Mic size={16} /> Analizar grabación</>}
             </button>
           </div>
-          {uploadData && (
-            <div className="sa-upload-info">
-              <div className="sa-upload-info__item"><CheckCircle size={14} className="sa-upload-info__icon--success" /><span>{t.speech.audioProcessed}</span></div>
-              <div className="sa-upload-info__item"><Clock size={14} /><span>{formatDuration(uploadData.duration_seconds)}</span></div>
-              <div className="sa-upload-info__item"><FileAudio size={14} /><span>{uploadData.format.toUpperCase()} · {uploadData.channels === 1 ? 'Mono' : 'Stereo'}</span></div>
+
+          {/* Barra de progreso del análisis asíncrono */}
+          {isAnalyzing && analysisProgress && (
+            <div style={{
+              marginTop: '1rem',
+              padding: '0.85rem 1rem',
+              borderRadius: '0.5rem',
+              background: 'rgba(99,102,241,0.08)',
+              border: '1px solid rgba(99,102,241,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+            }}>
+              <span className="sa-spinner" style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>
+                  {analysisProgress.message}
+                </div>
+                {analysisProgress.jobId && (
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                    Job ID: {analysisProgress.jobId}
+                  </div>
+                )}
+                <div style={{
+                  marginTop: '0.4rem',
+                  height: '3px',
+                  borderRadius: '999px',
+                  background: 'rgba(99,102,241,0.15)',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{
+                    height: '100%',
+                    borderRadius: '999px',
+                    background: 'linear-gradient(90deg, #6366f1, #818cf8)',
+                    animation: 'sa-progress-indeterminate 1.4s ease-in-out infinite',
+                    width: '40%',
+                  }} />
+                </div>
+              </div>
+              <div style={{
+                fontSize: '0.65rem',
+                padding: '0.2rem 0.5rem',
+                borderRadius: '999px',
+                background: 'rgba(99,102,241,0.15)',
+                color: '#818cf8',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                flexShrink: 0,
+              }}>
+                {analysisProgress.phase === 'uploading'   && 'Subiendo'}
+                {analysisProgress.phase === 'queued'      && 'En cola'}
+                {analysisProgress.phase === 'processing'  && 'Procesando'}
+                {analysisProgress.phase === 'fetching'    && 'Cargando'}
+              </div>
             </div>
           )}
         </div>
@@ -628,7 +727,7 @@ export const SpeechAnalyticsView: React.FC<SpeechAnalyticsViewProps> = ({
                 <div className="sa-stats__divider" />
                 <div className="sa-stats__item">
                   <span className="sa-stats__lbl">{t.speech.duration}</span>
-                  <span className="sa-stats__val">{formatDuration(rg.duracion_llamada_segundos)}</span>
+                  <span className="sa-stats__val">{formatDuration(duracionSegundos ?? rg.duracion_llamada_segundos ?? 0)}</span>
                 </div>
                 <div className="sa-stats__divider" />
                 <div className="sa-stats__item">

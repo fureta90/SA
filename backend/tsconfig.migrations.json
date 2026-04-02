@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "resolvePackageJsonExports": false,
+    "outDir": "./dist-migrations"
+  },
+  "include": ["src/database/data-source.ts", "src/migrations/**/*.ts"],
+  "ts-node": {
+    "esm": false,
+    "experimentalSpecifierResolution": "node"
+  }
+}

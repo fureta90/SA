@@ -45,4 +45,5 @@ export interface CreateCallDto {
   idLlamada?: string
   idContacto?: string
   duracionSegundos?: number
+  tipoLlamada?: 'entrante' | 'saliente'
 }

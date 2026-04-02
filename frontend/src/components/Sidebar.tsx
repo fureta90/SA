@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Menu, Mic, Megaphone, BarChart2, X } from 'lucide-react'
+import { LayoutDashboard, Menu, Mic, Megaphone, BarChart2, Receipt, X } from 'lucide-react'
 import { useLang } from '../context/LangContext'
 
 interface SidebarProps {
@@ -18,7 +18,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, hasPermissio
   const isDashboardActive = pathname === '/' || pathname.startsWith('/inicio')
   const isSpeechActive = pathname === '/' || pathname.startsWith('/speech')
   const isCampaignsActive = pathname === '/' || pathname.startsWith('/campaigns')
-  const isReportsActive = pathname.startsWith('/reports')
+  const isReportsActive  = pathname.startsWith('/reports')
+  const isBillingActive  = pathname.startsWith('/billing')
   const isCollapsed = !isOpen
 
   // Cerrar con tecla Escape
@@ -132,6 +133,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle, hasPermissio
               </Link>
             </>
           )}
+
+          {/* Facturación — visible para admin y para clientes con campañas asignadas */}
+          <Link
+            to="/billing"
+            className={`sidebar__nav-item ${isBillingActive ? 'sidebar__nav-item--active' : ''}`}
+            data-tooltip={t.sidebar.billing || 'Facturación'}
+          >
+            <Receipt size={20} className="sidebar__nav-icon" />
+            {!isCollapsed && <span className="sidebar__nav-text">{t.sidebar.billing || 'Facturación'}</span>}
+          </Link>
          
         </nav>
 

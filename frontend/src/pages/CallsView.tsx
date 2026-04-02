@@ -25,6 +25,25 @@ interface CallsViewProps {
   openCallId?:  string
 }
 
+// Estados que corresponden a "EN PROGRESO"
+const IN_PROGRESS_STATUSES = new Set(['PENDING', 'UPLOADING', 'UPLOADED', 'ANALYZING'])
+const ALL_STATUSES = new Set(['PENDING', 'UPLOADING', 'UPLOADED', 'ANALYZING', 'ANALYZED', 'AUDITED', 'ERROR'])
+
+// Lee el filtro guardado por el Dashboard en sessionStorage y lo limpia.
+// Devuelve el Set de estados a mostrar, o null si no había filtro (= mostrar todos).
+function consumeStatusFilter(): Set<string> | null {
+  try {
+    const raw = sessionStorage.getItem('calls_status_filter')
+    if (!raw) return null
+    sessionStorage.removeItem('calls_status_filter')
+    if (raw === 'ALL')         return new Set(ALL_STATUSES)
+    if (raw === 'IN_PROGRESS') return new Set(IN_PROGRESS_STATUSES)
+    return new Set([raw])
+  } catch {
+    return null
+  }
+}
+
 // ─── Main View ─────────────────────────────────────────────────────────────────
 
 export const CallsView: React.FC<CallsViewProps> = ({ campaignId, campaignName, onBack, openCallId }) => {
@@ -38,7 +57,13 @@ export const CallsView: React.FC<CallsViewProps> = ({ campaignId, campaignName, 
   const [viewMode, setViewMode]         = useState<'grid'|'list'>(
     () => (localStorage.getItem('calls-view-mode') as 'grid'|'list') ?? 'grid'
   )
-  const [activeFilters, setActiveFilters] = useState<Set<string>>(() => new Set(['ANALYZED', 'PENDING', 'UPLOADING', 'UPLOADED', 'ANALYZING', 'ANALYZED', 'ERROR']))
+
+  // Inicializar activeFilters: si el Dashboard dejó un filtro en sessionStorage lo usamos,
+  // si no, mostramos todos los estados.
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(
+    () => consumeStatusFilter() ?? new Set(ALL_STATUSES)
+  )
+
   const [sortBy, setSortBy] = useState<'date' | 'score' | 'ind'>('date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
@@ -135,10 +160,11 @@ export const CallsView: React.FC<CallsViewProps> = ({ campaignId, campaignName, 
 
   const handleDelete = async (call: Call) => {
     const result = await Swal.fire({
-      title: t.actions.delete, text: `${call.nombreGrabacion}`,
+      title: t.actions.delete, text: t.actions.delete + ' ' + `${call.nombreGrabacion}`,
       icon: 'warning', showCancelButton: true,
       confirmButtonColor: '#dc2626', cancelButtonColor: '#6b7280',
-      confirmButtonText: t.actions.delete, cancelButtonText: t.actions.cancel,
+      confirmButtonText: t.actions.delete, 
+      cancelButtonText: t.actions.cancel,
     })
     if (!result.isConfirmed) return
     try { await callsService.remove(call.id); await loadCalls() }
@@ -146,6 +172,19 @@ export const CallsView: React.FC<CallsViewProps> = ({ campaignId, campaignName, 
   }
 
   const handleRetry = async (call: Call) => {
+    if (call.status === 'ANALYZED' || call.status === 'AUDITED') {
+      const result = await Swal.fire({
+        icon: 'warning',
+        title: t.speech.Reanalyze,
+        text: t.actions.reanalyzeText,
+        showCancelButton: true,
+        confirmButtonText: t.actions.confirm,
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#7c3aed',
+        cancelButtonColor: '#6b7280',
+      })
+      if (!result.isConfirmed) return
+    }
     try { await callsService.retry(call.id); await loadCalls() }
     catch { Swal.fire({ icon: 'error', title: t.errors.generic, text: t.errors.generic, confirmButtonColor: '#dc2626' }) }
   }
@@ -205,64 +244,16 @@ export const CallsView: React.FC<CallsViewProps> = ({ campaignId, campaignName, 
 
       {/* Header */}
       <div className="calls-header">
-        <div className="calls-header__left">
-          <button className="calls-header__back" onClick={onBack} title={t.actions.close}><ArrowLeft size={16}/></button>
-          <div>
-            <h2 className="calls-header__title">{campaignName}</h2>
-            <p className="calls-header__sub">{filteredCalls.length} de {calls.length} grabación{calls.length !== 1 ? 'es' : ''}</p>
-          </div>
-        </div>
-        <div className="calls-header__right">
-          <button className="calls-header__icon-btn" onClick={() => loadCalls(true)} disabled={isRefreshing} title={t.actions.loading}>
-            <RefreshCw size={15} className={isRefreshing ? 'spin' : ''}/>
-          </button>
-          <button
-            className={`calls-header__icon-btn${hasActiveSearch ? ' calls-header__icon-btn--active' : ''}`}
-            onClick={openModal} title={t.actions.search}
-          >
-            <Filter size={15}/>
-            {hasActiveSearch && <span className="calls-header__filter-dot"/>}
-          </button>
-          {/* Sort controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.2rem' }}>
-            {([
-              { key: 'date',  label: 'Fecha' },
-              { key: 'score', label: '% Score' },
-              { key: 'ind',   label: 'Ind.' },
-            ] as const).map(opt => (
-              <button
-                key={opt.key}
-                onClick={() => {
-                  if (sortBy === opt.key) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
-                  else { setSortBy(opt.key); setSortDir('desc') }
-                }}
-                style={{
-                  padding: '0.25rem 0.6rem', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                  fontSize: '0.72rem', fontWeight: 600,
-                  background: sortBy === opt.key ? 'var(--color-primary)' : 'transparent',
-                  color: sortBy === opt.key ? '#fff' : 'var(--text-muted)',
-                  display: 'flex', alignItems: 'center', gap: '0.2rem',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {opt.label}
-                {sortBy === opt.key && (
-                  <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div className="calls-view-toggle">
-            <button className={`calls-view-toggle__btn ${viewMode==='grid'?'calls-view-toggle__btn--active':''}`}
-              onClick={() => { setViewMode('grid'); localStorage.setItem('calls-view-mode','grid') }}
-              title="Vista cards"><LayoutGrid size={14}/></button>
-            <button className={`calls-view-toggle__btn ${viewMode==='list'?'calls-view-toggle__btn--active':''}`}
-              onClick={() => { setViewMode('list'); localStorage.setItem('calls-view-mode','list') }}
-              title="Vista lista"><LayoutList size={14}/></button>
+        <div className="calls-header__top">
+          <div className="calls-header__left">
+            <button className="calls-header__back" onClick={onBack} title={t.actions.close}><ArrowLeft size={16}/></button>
+            <div>
+              <h2 className="calls-header__title">{campaignName}</h2>
+              <p className="calls-header__sub">{filteredCalls.length} de {calls.length} grabación{calls.length !== 1 ? 'es' : ''}</p>
+            </div>
           </div>
           {(isAdmin || hasPermission('add_campaigns')) && (
-            <button className="btn btn-primary" onClick={() => setShowUpload(true)}>
+            <button className="btn btn-primary calls-header__new-btn" onClick={() => setShowUpload(true)}>
               <Plus size={16}/> {t.speech.newAudio}
             </button>
           )}
@@ -327,24 +318,75 @@ export const CallsView: React.FC<CallsViewProps> = ({ campaignId, campaignName, 
         </div>
       )}
 
-      {/* Filtros por estado */}
+      {/* Fila controles + estados */}
       {calls.length > 0 && (
-        <div className="calls-filters">
-          {Object.entries(statusCounts).map(([status, count]) => {
-            const cfg = getStatusConfig(t)[status as CallStatus]
-            const isActive = activeFilters.has(status)
-            return (
-              <button key={status}
-                className={`call-filter-btn call-filter-btn--${status.toLowerCase()} ${isActive?'call-filter-btn--active':''}`}
-                onClick={() => toggleFilter(status)}>
-                {['UPLOADING','ANALYZING'].includes(status) && isActive && <span className="call-status__spinner"/>}
-                <span>{count}</span><span>{cfg.label}</span>
-              </button>
-            )
-          })}
-          {activeFilters.size > 0 && (
-            <button className="call-filter-clear" onClick={() => setActiveFilters(new Set())}>{t.actions.filters}</button>
-          )}
+        <div className="calls-controls-row">
+          <div className="calls-header__right">
+            <button className="calls-header__icon-btn" onClick={() => loadCalls(true)} disabled={isRefreshing} title={t.actions.loading}>
+              <RefreshCw size={15} className={isRefreshing ? 'spin' : ''}/>
+            </button>
+            <button
+              className={`calls-header__icon-btn${hasActiveSearch ? ' calls-header__icon-btn--active' : ''}`}
+              onClick={openModal} title={t.actions.search}
+            >
+              <Filter size={15}/>
+              {hasActiveSearch && <span className="calls-header__filter-dot"/>}
+            </button>
+            {/* Sort controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.2rem' }}>
+              {([
+                { key: 'date',  label: 'Fecha' },
+                { key: 'score', label: '% Score' },
+                { key: 'ind',   label: 'Ind.' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => {
+                    if (sortBy === opt.key) setSortDir(d => d === 'desc' ? 'asc' : 'desc')
+                    else { setSortBy(opt.key); setSortDir('desc') }
+                  }}
+                  style={{
+                    padding: '0.25rem 0.6rem', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    fontSize: '0.72rem', fontWeight: 600,
+                    background: sortBy === opt.key ? 'var(--color-primary)' : 'transparent',
+                    color: sortBy === opt.key ? '#fff' : 'var(--text-muted)',
+                    display: 'flex', alignItems: 'center', gap: '0.2rem',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {opt.label}
+                  {sortBy === opt.key && (
+                    <span style={{ fontSize: '0.65rem', opacity: 0.85 }}>{sortDir === 'desc' ? '↓' : '↑'}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="calls-view-toggle">
+              <button className={`calls-view-toggle__btn ${viewMode==='grid'?'calls-view-toggle__btn--active':''}`}
+                onClick={() => { setViewMode('grid'); localStorage.setItem('calls-view-mode','grid') }}
+                title="Vista cards"><LayoutGrid size={14}/></button>
+              <button className={`calls-view-toggle__btn ${viewMode==='list'?'calls-view-toggle__btn--active':''}`}
+                onClick={() => { setViewMode('list'); localStorage.setItem('calls-view-mode','list') }}
+                title="Vista lista"><LayoutList size={14}/></button>
+            </div>
+          </div>
+          <div className="calls-filters">
+            {Object.entries(statusCounts).map(([status, count]) => {
+              const cfg = getStatusConfig(t)[status as CallStatus]
+              const isActive = activeFilters.has(status)
+              return (
+                <button key={status}
+                  className={`call-filter-btn call-filter-btn--${status.toLowerCase()} ${isActive?'call-filter-btn--active':''}`}
+                  onClick={() => toggleFilter(status)}>
+                  {['UPLOADING','ANALYZING'].includes(status) && isActive && <span className="call-status__spinner"/>}
+                  <span>{count}</span><span>{cfg.label}</span>
+                </button>
+              )
+            })}
+            {activeFilters.size > 0 && (
+              <button className="call-filter-clear" onClick={() => setActiveFilters(new Set())}>{t.actions.filters}</button>
+            )}
+          </div>
         </div>
       )}
 

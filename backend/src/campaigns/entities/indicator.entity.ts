@@ -15,7 +15,7 @@ export class Indicator {
   @Column('float')
   Puntaje_No_Hace: number
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 'MAX' })
   descripcion: string
 
   @Column({ nullable: true })

@@ -1,3 +1,5 @@
+// ─── Interfaces ───────────────────────────────────────────────────────────────
+
 export interface UploadAudioResponse {
   success: boolean
   gcs_uri: string
@@ -66,101 +68,189 @@ export interface AnalyzeAudioResponse {
   }
 }
 
-// ─── Configuración ───────────────────────────────────────────────────────────
+// Respuesta inmediata del POST /analyze
+export interface SubmitAnalysisResponse {
+  job_id: string
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'PARTIAL' | 'FAILED'
+  message: string
+  poll_url: string
+}
 
-const UPLOAD_URL = 'https://audio-processor-788612607917.us-central1.run.app/process'
-const UPLOAD_TOKEN = '15555fa26720a601cd964bf4d6e5cbfbc6fa5422be2f7c5eed7dd9aac4367856'
+// Estado del job — GET /status/{job_id}
+export interface JobStatusResponse {
+  job_id: string
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'PARTIAL' | 'FAILED'
+  created_at?: string
+  updated_at?: string
+  processing_time_seconds?: number
+  result_gcs_uri?: string
+  error?: string
+}
 
-const ANALYZE_URL = 'https://speech-analytics-788612607917.us-central1.run.app/analyze'
-const ANALYZE_TOKEN = '0x00CFA7084BEDE74B87F2FAF95CA2D322020000007CA361A782BAF7E77D9293470D7221EE9B616F5280CDBCAFB1FEC8D3434D795AF6B726DF466C9F89DF3E66D65ED042EC24BCAE58726658FC647E92D164AC01C94782ADB2361B93D304EC48299B3DB1BB76982D9C24A3DB9C06CA699DCEF5E2CC'
+// Mensaje de progreso para mostrar en la UI
+export interface AnalysisProgress {
+  phase: 'uploading' | 'queued' | 'processing' | 'fetching' | 'done' | 'error'
+  message: string
+  jobId?: string
+}
 
-// ─── Indicadores fijos ───────────────────────────────────────────────────────
+// ─── Configuración ────────────────────────────────────────────────────────────
 
-const INDICADORES_BASE = [
-  {
-    INDICADOR: 'Saludo cordial',
-    Puntaje_Si_Hace: 10,
-    Puntaje_No_Hace: 0,
-    descripcion: 'El agente saluda de manera cordial',
-  },
-  {
-    INDICADOR: 'Identificación personal',
-    Puntaje_Si_Hace: 10,
-    Puntaje_No_Hace: 0,
-    descripcion: 'Se identifica con nombre y empresa',
-  },
-  {
-    INDICADOR: 'Escucha activa',
-    Puntaje_Si_Hace: 15,
-    Puntaje_No_Hace: 0,
-    descripcion: 'Demuestra que escucha al cliente',
-  },
-  {
-    INDICADOR: 'Ofrece soluciones',
-    Puntaje_Si_Hace: 20,
-    Puntaje_No_Hace: 0,
-    descripcion: 'Propone soluciones al problema',
-  },
-  {
-    INDICADOR: 'Despedida profesional',
-    Puntaje_Si_Hace: 10,
-    Puntaje_No_Hace: 0,
-    descripcion: 'Se despide correctamente',
-  },
-]
+// ── Proxy a través del backend — nunca directo al producer externo ──
+const PROXY_BASE = '/api-backend/speech'
+const UPLOAD_URL   = `${PROXY_BASE}/upload`
+const ANALYZE_URL  = `${PROXY_BASE}/analyze`
+const STATUS_URL   = (jobId: string) => `${PROXY_BASE}/status/${jobId}`
+const RESULT_URL   = (jobId: string) => `${PROXY_BASE}/result/${jobId}`
 
-// ─── Servicio ────────────────────────────────────────────────────────────────
+
+const authHeader = (): Record<string, string> => {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+// ─── Helper de polling ────────────────────────────────────────────────────────
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+async function pollUntilDone(
+  jobId: string,
+  onProgress: (p: AnalysisProgress) => void,
+  intervalMs = 4_000,
+  timeoutMs  = 10 * 60 * 1000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+
+  while (Date.now() < deadline) {
+    await sleep(intervalMs)
+
+    const res = await fetch(STATUS_URL(jobId), { headers: authHeader() })
+    if (!res.ok) {
+      const err = await res.text()
+      throw new Error(`Error al consultar estado: ${err}`)
+    }
+
+    const data: JobStatusResponse = await res.json()
+
+    switch (data.status) {
+      case 'PENDING':
+        onProgress({ phase: 'queued',      message: 'En cola, esperando procesamiento...', jobId })
+        break
+      case 'PROCESSING':
+        onProgress({ phase: 'processing',  message: 'Analizando audio con IA...', jobId })
+        break
+      case 'COMPLETED':
+      case 'PARTIAL':
+        onProgress({ phase: 'fetching',    message: 'Análisis completado, cargando resultado...', jobId })
+        return   // ← sale del loop, el caller llama a /result
+      case 'FAILED':
+        throw new Error(`El análisis falló: ${data.error ?? 'error desconocido'}`)
+    }
+  }
+
+  throw new Error(`Timeout: el job ${jobId} no terminó en ${timeoutMs / 60000} minutos`)
+}
+
+// ─── Servicio ─────────────────────────────────────────────────────────────────
 
 export const speechAnalyticsService = {
-  async uploadAudio(file: File, callId: string = 'CALL-001'): Promise<UploadAudioResponse> {
+
+  /**
+   * 1. Sube el audio al Producer.
+   *    POST /upload → devuelve gcs_uri
+   */
+  async uploadAudio(
+    file: File,
+    callId: string = 'CALL-001',
+    onProgress?: (p: AnalysisProgress) => void,
+  ): Promise<UploadAudioResponse> {
+    onProgress?.({ phase: 'uploading', message: 'Subiendo audio...' })
+
     const form = new FormData()
     form.append('file', file)
     form.append('call_id', callId)
-    form.append('target_sample_rate', '16000')
-    form.append('apply_filters', 'true')
 
     const res = await fetch(UPLOAD_URL, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${UPLOAD_TOKEN}`,
-      },
+      headers: authHeader(),
       body: form,
     })
 
-    if (!res.ok) {
-      const err = await res.text()
-      throw new Error(`Error al subir el audio: ${err}`)
-    }
-
+    if (!res.ok) throw new Error(`Error al subir el audio: ${await res.text()}`)
     return res.json()
   },
 
-  async analyzeAudio(
+  /**
+   * 2. Encola el análisis.
+   *    POST /analyze → devuelve { job_id, status: "PENDING", ... } de inmediato
+   */
+  async submitAnalysis(
     audioUri: string,
-    callId: string = 'call-12345'
-  ): Promise<AnalyzeAudioResponse> {
+    callId: string,
+    indicadores: any[],
+    extraMetadata?: Record<string, any>,
+  ): Promise<SubmitAnalysisResponse> {
     const res = await fetch(ANALYZE_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${ANALYZE_TOKEN}`,
-      },
+      headers: { ...authHeader(), 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        audio_uri: audioUri,
-        call_id: callId,
-        indicadores: INDICADORES_BASE,
-        metadata: {
-          campaña: 'atencion_al_cliente',
-          equipo: 'team_1',
-        },
+        audio_uri:            audioUri,
+        transcription_engine: 'gemini',
+        call_id:              callId,
+        indicadores,
+        metadata: extraMetadata ?? {},
+        // sin webhook_url — usamos polling directo desde el frontend
       }),
     })
 
-    if (!res.ok) {
-      const err = await res.text()
-      throw new Error(`Error al analizar el audio: ${err}`)
-    }
-
+    if (!res.ok) throw new Error(`Error al encolar el análisis: ${await res.text()}`)
     return res.json()
+    // { job_id: "57e84997-...", status: "PENDING", message: "Job encolado", poll_url: "/status/..." }
+  },
+
+  /**
+   * 3. Obtiene el resultado completo de un job terminado.
+   *    GET /result/{job_id}
+   */
+  async getJobResult(jobId: string): Promise<AnalyzeAudioResponse> {
+    const res = await fetch(RESULT_URL(jobId), { headers: authHeader() })
+    if (!res.ok) throw new Error(`Error al obtener resultado: ${await res.text()}`)
+    return res.json()
+  },
+
+  /**
+   * Flujo completo para la SpeechAnalyticsView (upload manual):
+   *   uploadAudio → submitAnalysis → polling hasta COMPLETED → getJobResult
+   *
+   * onProgress recibe actualizaciones en cada fase para mostrar en la UI.
+   */
+  async analyzeAudio(
+    file: File,
+    callId: string,
+    indicadores: any[],
+    onProgress: (p: AnalysisProgress) => void,
+  ): Promise<AnalyzeAudioResponse> {
+
+    // Paso 1: subir audio
+    const uploadResult = await speechAnalyticsService.uploadAudio(file, callId, onProgress)
+
+    // Paso 2: encolar análisis
+    onProgress({ phase: 'queued', message: 'Encolando análisis...' })
+    const submitted = await speechAnalyticsService.submitAnalysis(
+      uploadResult.gcs_uri,
+      callId,
+      indicadores,
+    )
+    onProgress({ phase: 'queued', message: 'Job encolado, esperando procesamiento...', jobId: submitted.job_id })
+
+    // Paso 3: polling hasta COMPLETED
+    await pollUntilDone(submitted.job_id, onProgress)
+
+    // Paso 4: obtener resultado
+    onProgress({ phase: 'fetching', message: 'Descargando resultado...', jobId: submitted.job_id })
+    const result = await speechAnalyticsService.getJobResult(submitted.job_id)
+
+    onProgress({ phase: 'done', message: 'Análisis completado', jobId: submitted.job_id })
+    return result
   },
 }

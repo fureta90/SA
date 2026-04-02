@@ -1,12 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MailService {
-  constructor(private readonly mailerService: MailerService) {}
+  constructor(private readonly mailerService: MailerService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async sendPasswordReset(email: string, link: string) {
+  const baseUrl = this.configService.getOrThrow<string>('URL_APP');
+  const logoUrl = `${baseUrl.replace(/\/$/, '')}/logo-FindControl/Logo_FindControl_Completo_Blanco_300.png`;
+
   await this.mailerService.sendMail({
+    
     to: email,
     subject: 'Restablecer contraseña - FindControl',
     html: `
@@ -26,7 +33,7 @@ export class MailService {
                 <!-- Header con gradiente -->
                 <tr>
                   <td style="background: linear-gradient(90deg, #42A1F1 0%, #6DE99A 100%); padding: 32px 40px; text-align: center;">
-                    <img src="https://correos.findcontrol.info/logo-FindControl/Logo_FindControl_Completo_Blanco_300.png" alt="FindControl" style="max-width: 180px; height: auto; filter: brightness(0) invert(1);">
+                    <img src="${logoUrl}" alt="FindControl" style="max-width: 180px; height: auto; filter: brightness(0) invert(1);">
                   </td>
                 </tr>
                 
